@@ -5,39 +5,51 @@ classdef agent < handle
     properties
         name
         position (2,1) double {mustBeNumeric}   % absolute coordinates
-        orientation (1,1) double {mustBeNumeric}    % direction of the agent in rad
         dimension (1,1) double {mustBeNumeric}  % agent as a circle 
         attached (1,1) logical % is the agent attached to the load? 
         load_box rect_load
         Ts (1,1) double {mustBeNumeric} %sampling time
         comm_range (1,1) double {mustBeNumeric}
         lidar_range (1,1) double {mustBeNumeric}
-        msg_in 
+        msg_in
     end
     
     methods
-        function obj = agent(name, init_position, init_orientation, param, box)
+        function obj = agent(name, init_position, param, box)
             obj.name = name;
             obj.position = init_position;
-            obj.orientation = init_orientation;
             obj.load_box = box;
             obj.dimension = param.radius;
             obj.comm_range = param.comm_range;
             obj.lidar_range = param.range;
             obj.attached = false; % starts as unattached
-            obj.msg_in = [];            
+            obj.msg_in = [];
         end
         
+        % SETTERS
         function set.attached(obj, v)
             obj.attached = v;
         end
-        
         function set.msg_in(obj, text)
             obj.msg_in = text;
         end
+        function set.position(obj, pos)
+            obj.position = pos;
+        end
+        function set.Ts(obj, t)
+            obj.Ts = t;
+        end
         
-        function obj = clearComms(obj)  % clear the comm buffer
+        function clearComms(obj)  % clear the comm buffer
             obj.msg_in = [];
+        end
+        
+        function move(obj, velocity) % compute the position at the next integration step               
+            if(size(velocity, 2) ~= 1)
+                obj.position = obj.position + obj.Ts * velocity';
+            else
+                obj.position = obj.position + obj.Ts * velocity;
+            end
         end
         
         function obj = attach(obj) % if possible attach the robot to the load
@@ -73,11 +85,6 @@ classdef agent < handle
             end
             hold off
         end
-        
-        function obj = move(obj, velocity)
-            obj.position = velocity * obj.Ts;
-        end
-
     end
 end
 
