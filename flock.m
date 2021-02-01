@@ -38,6 +38,19 @@ classdef flock < handle
             flag = obj.my_load.isBalanced(points);
         end
         
+        function meetNeighbours(obj)
+            for i = 1:obj.n_agents
+                for j = 1:obj.n_agents
+                    if(i ~= j)
+                        mex = strcat('N', obj.agents(i).name, ...
+                                     ',X', num2str(obj.agents(i).position(1)),...
+                                     ',Y', num2str(obj.agents(i).position(2)), ';');
+                        obj.agents(i).sendMessage(obj.agents(j), mex); 
+                    end
+                end
+            end
+        end
+        
         function plot(obj)
             % representation in a 2D plane of the agents and the load
             hold on

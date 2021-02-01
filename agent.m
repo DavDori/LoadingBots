@@ -7,11 +7,15 @@ classdef agent < handle
         position (2,1) double {mustBeNumeric}   % absolute coordinates
         dimension (1,1) double {mustBeNumeric}  % agent as a circle 
         attached (1,1) logical % is the agent attached to the load? 
-        load_box rect_load
-        Ts (1,1) double {mustBeNumeric} %sampling time
-        comm_range (1,1) double {mustBeNumeric}
-        lidar_range (1,1) double {mustBeNumeric}
+        load_box rect_load % object representing the load the agents have to move around
+        
+        Ts (1,1) double {mustBeNumeric} % sampling time
+        comm_range (1,1) double {mustBeNumeric} % max range to an agent that enables communication
+        lidar_range (1,1) double {mustBeNumeric} % max distance at which an obstacle can be detected
+        
         msg_in
+        Neighbours % positions and names of in range agents
+        Voronoi_cell double {mustBeNumeric} % discretization of the space arount the agent
     end
     
     methods
@@ -24,6 +28,8 @@ classdef agent < handle
             obj.lidar_range = param.range;
             obj.attached = false; % starts as unattached
             obj.msg_in = [];
+            obj.Neighbours = [];
+            obj.Voronoi_cell = zeros(param.N_rho, param.N_phi); 
         end
         
         % SETTERS
@@ -39,10 +45,57 @@ classdef agent < handle
         function set.Ts(obj, t)
             obj.Ts = t;
         end
+        function set.Neighbours(obj, info)
+            obj.Neighbours = info;
+        end
+        function set.Voronoi_cell(obj, v_cell)
+            obj.Voronoi_cell = v_cell;
+        end
+        
+        % METHODS: communication
         
         function clearComms(obj)  % clear the comm buffer
             obj.msg_in = [];
         end
+        
+        function sendMessage(obj, other, text) % send a message to the other agent if it's within comm distance
+            q = obj.position - other.position;
+            dist = sqrt(q' * q);
+            if(obj.comm_range > dist)
+                other.msg_in = strcat(other.msg_in, text);
+            end
+        end
+        
+        function decodeTextIn(obj)
+            % takes the message that the agent recived and tries to decode
+            % it
+            texts = split(obj.msg_in,';');
+            for i = 1:length(texts)
+                cmds = split(texts(i),',');
+                for j = 1:length(cmds)
+                    obj.executeCmd(cmds(j));
+                end
+            end
+        end
+        
+        function executeCmd(obj, cmd)
+            exe = cell2mat(cmd);
+            if(isempty(exe) == false)
+                if(exe(1) == 'N') % name of the agent
+                    if(isempty(obj.Neighbours))
+                        obj.Neighbours = struct('name',exe(2:end), 'position', [0,0]);
+                    else
+                        obj.Neighbours(end+1) = struct('name',exe(2:end), 'position', [0,0]);
+                    end
+                elseif(exe(1) == 'X') % x position of the agent
+                    obj.Neighbours(end).position(1) = str2double(exe(2:end));
+                elseif(exe(1) == 'Y') % y position of the agent
+                    obj.Neighbours(end).position(2) = str2double(exe(2:end));
+                end
+            end
+        end
+        
+        % METHODS: actions
         
         function move(obj, velocity) % compute the position at the next integration step               
             if(size(velocity, 2) ~= 1)
@@ -63,18 +116,67 @@ classdef agent < handle
             obj.attached = false;
         end
         
+        % METHODS: control
         
-        function r = isInsideRectLoad(obj) % check weather the agent is within the designated area
+        function computeVoronoiCell(obj)
+            % discretize a circular space around the agent. Set to 1 the
+            % point closer to the agent and to 0 those closer to the
+            % neighbour agents.
+            % define resolution of the angle and radius
+            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
+            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            
+            Neighbour_local = getNeighboursLocal(obj);
+            
+            % for every point in the cell check if it's closer to agent
+            for i = 1:size(obj.Voronoi_cell, 1)
+                for j = 1:size(obj.Voronoi_cell, 2)
+                    rho = i * res_rho;
+                    phi = j * res_phi;
+                    [x, y] = polar2cartesian(rho,phi);
+                    point = [x, y];
+                    obj.Voronoi_cell(i,j) = ...
+                        isAgentCloser(obj, Neighbour_local, point);
+                end
+            end
+        end
+        
+        function r = isAgentCloser(Neighbours, point)
+            % check if the obj agent is the closest to a point, 1 it's the
+            % closest, 0 it's not. Coordinates are conidered in the
+            % reference frame of the obj agent.
+            
+            dist_obj = sqrt(point(1)^2 + point(2)^2);
+            r = 1;
+            for i = 1:length(Neighbours)
+                pos = Neighbours(i).position;
+                neighbor_dist = sqrt((point(1) - pos(1))^2 + ...
+                                     (point(2) - pos(2))^2);
+                if(neighbor_dist < dist_obj)
+                    r = 0;
+                    break;
+                end
+            end
+        end
+        
+        function r = isInsideRectLoad(obj) 
+            % check weather the agent is within the designated area
             r = isInside(obj.load_box, obj.position);
         end
         
-        function sendMessage(obj, other, text) % send a message to the other agent if it's within comm distance
-            q = obj.position - other.position;
-            dist = sqrt(q' * q);
-            if(obj.comm_range > dist)
-                other.msg_in = strcat(other.msg_in, text);
+        % METHODS: auxiliary
+        
+        function Neighbour_local = getNeighboursLocal(obj)
+            % return the Neighbours positions in local coordinates
+            Neighbour_local = obj.Neighbours;
+            
+            for i = 1:length(obj.Neighbours)
+                Neighbour_local(i).position = ...
+                    global2local(obj.position, obj.Neighbours.position); 
             end
         end
+        
+        % METHODS: representation
         
         function plot(obj) % represent the agent on a 2D plain in red if free to move, in blue if attached
             hold on

@@ -29,14 +29,8 @@ Ts = 10e-2;
 my_robot_army = flock(agents, loadObj, Ts);
 
 % check neighbour
-nodes = length(agents);
-for i = 1:nodes
-    for j = 1:nodes
-        if(i ~= j)
-            agents(i).sendMessage(agents(j),strcat(agents(i).name,'-'));
-        end
-    end
-end
+my_robot_army.meetNeighbours();
+my_robot_army.agents(1).decodeTextIn();
 
 figure()
 grid on
