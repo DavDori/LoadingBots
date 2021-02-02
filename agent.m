@@ -126,7 +126,8 @@ classdef agent < handle
             res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
             res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
             
-            Neighbour_local = getNeighboursLocal(obj);
+            Neighbours_local_position = getNeighboursLocalPosition(obj);
+            cell = zeros(size(obj.Voronoi_cell));
             
             % for every point in the cell check if it's closer to agent
             for i = 1:size(obj.Voronoi_cell, 1)
@@ -135,29 +136,13 @@ classdef agent < handle
                     phi = j * res_phi;
                     [x, y] = polar2cartesian(rho,phi);
                     point = [x, y];
-                    obj.Voronoi_cell(i,j) = ...
-                        isAgentCloser(obj, Neighbour_local, point);
+                    cell(i,j) = ...
+                        isCloser(Neighbours_local_position, point);
                 end
             end
+            obj.Voronoi_cell = cell;
         end
         
-        function r = isAgentCloser(Neighbours, point)
-            % check if the obj agent is the closest to a point, 1 it's the
-            % closest, 0 it's not. Coordinates are conidered in the
-            % reference frame of the obj agent.
-            
-            dist_obj = sqrt(point(1)^2 + point(2)^2);
-            r = 1;
-            for i = 1:length(Neighbours)
-                pos = Neighbours(i).position;
-                neighbor_dist = sqrt((point(1) - pos(1))^2 + ...
-                                     (point(2) - pos(2))^2);
-                if(neighbor_dist < dist_obj)
-                    r = 0;
-                    break;
-                end
-            end
-        end
         
         function r = isInsideRectLoad(obj) 
             % check weather the agent is within the designated area
@@ -166,13 +151,13 @@ classdef agent < handle
         
         % METHODS: auxiliary
         
-        function Neighbour_local = getNeighboursLocal(obj)
+        function Neighbour_local = getNeighboursLocalPosition(obj)
             % return the Neighbours positions in local coordinates
-            Neighbour_local = obj.Neighbours;
+            Neighbour_local = zeros([size(obj.Neighbours,1), 2]);
             
             for i = 1:length(obj.Neighbours)
-                Neighbour_local(i).position = ...
-                    global2local(obj.position, obj.Neighbours.position); 
+                Neighbour_local(i,:) = ...
+                    global2local(obj.position, obj.Neighbours(i).position'); 
             end
         end
         
@@ -186,6 +171,41 @@ classdef agent < handle
                 plot(obj.position(1), obj.position(2), 'or')
             end
             hold off
+        end
+        
+        function plotVoronoiCell(obj, color)
+            hold on
+            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
+            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            
+            for i = 1:size(obj.Voronoi_cell, 1) % rho
+                for j = 1:size(obj.Voronoi_cell, 2) % phi
+                    % represent every point of cell
+                    if(obj.Voronoi_cell(i,j) == 1)
+                        [x_local,y_local] = polar2cartesian(i * res_rho, j * res_phi);
+                        local_p = [x_local, y_local]';
+                        global_p = local2global(obj.position, local_p);
+                        
+                        plot(global_p(1),global_p(2), strcat('o',color));
+                    end
+                end
+            end
+            hold off
+        end
+        
+        function plotVoronoiCellFast(obj, color)
+            % consider only the outter perimeter of the cell
+            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
+            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            edges = zeros(size(obj.Voronoi_cell, 2), 2); 
+            
+            for i = 1:size(obj.Voronoi_cell, 2) % rho
+                [x_local,y_local] = polar2cartesian(...
+                    sum(obj.Voronoi_cell(:,i)) * res_rho, i * res_phi);
+                local_p = [x_local, y_local]';
+                edges(i,:) = local2global(obj.position, local_p);
+            end
+            plot(edges(:,1), edges(:,2), color);
         end
     end
 end

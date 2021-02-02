@@ -13,6 +13,8 @@ orientation = pi/4;         % [rad]
 param.range = 1;            % [m] max observable range
 param.comm_range = 0.8;     % [m] max connection distance
 param.radius = 0.1;         % [m] hitbox of the agent
+param.N_rho = 60;
+param.N_phi = 60;
 
 loadObj = rect_load(center, center_mass, orientation, dimensions);
 agents(1) = agent('James',[1.2;1.3], param, loadObj);
@@ -31,6 +33,13 @@ my_robot_army = flock(agents, loadObj, Ts);
 % check neighbour
 my_robot_army.meetNeighbours();
 my_robot_army.agents(1).decodeTextIn();
+my_robot_army.agents(1).computeVoronoiCell();
+
+figure()
+grid on
+axis equal
+my_robot_army.agents(1).plotVoronoiCellFast('r');
+
 
 figure()
 grid on
