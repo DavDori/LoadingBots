@@ -45,11 +45,23 @@ classdef flock < handle
                         mex = strcat('N', obj.agents(i).name, ...
                                      ',X', num2str(obj.agents(i).position(1)),...
                                      ',Y', num2str(obj.agents(i).position(2)), ';');
-                        obj.agents(i).sendMessage(obj.agents(j), mex); 
+                        obj.agents(i).sendMessage(obj.agents(j), mex);
                     end
                 end
             end
+            for agent = obj.agents
+                agent.decodeTextIn();
+                agent.clearComms();
+            end
         end
+        
+        function computeVoronoiTessellation(obj)
+            for a = obj.agents
+                a.computeVoronoiCell(); 
+            end
+        end
+        
+        % METHODS: representation
         
         function plot(obj)
             % representation in a 2D plane of the agents and the load
@@ -58,6 +70,14 @@ classdef flock < handle
             obj.my_load.plot('r')
             for a = obj.agents
                 a.plot();
+            end
+            hold off
+        end
+        
+        function plotVoronoiTessellation(obj)
+            hold on
+            for a = obj.agents
+                a.plotVoronoiCellFast([rand,rand,rand]); 
             end
             hold off
         end

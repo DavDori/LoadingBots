@@ -205,7 +205,7 @@ classdef agent < handle
                 local_p = [x_local, y_local]';
                 edges(i,:) = local2global(obj.position, local_p);
             end
-            plot(edges(:,1), edges(:,2), color);
+            plot(edges(:,1), edges(:,2), 'Color', color);
         end
     end
 end

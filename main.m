@@ -32,13 +32,12 @@ my_robot_army = flock(agents, loadObj, Ts);
 
 % check neighbour
 my_robot_army.meetNeighbours();
-my_robot_army.agents(1).decodeTextIn();
-my_robot_army.agents(1).computeVoronoiCell();
+my_robot_army.computeVoronoiTessellation();
 
 figure()
 grid on
 axis equal
-my_robot_army.agents(1).plotVoronoiCellFast('r');
+my_robot_army.plotVoronoiTessellation();
 
 
 figure()
