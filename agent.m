@@ -69,11 +69,13 @@ classdef agent < handle
         function decodeTextIn(obj)
             % takes the message that the agent recived and tries to decode
             % it
-            texts = split(obj.msg_in,';');
-            for i = 1:length(texts)
-                cmds = split(texts(i),',');
-                for j = 1:length(cmds)
-                    obj.executeCmd(cmds(j));
+            if(isempty(obj.msg_in) == false)
+                texts = split(obj.msg_in,';');
+                for i = 1:length(texts)
+                    cmds = split(texts(i),',');
+                    for j = 1:length(cmds)
+                        obj.executeCmd(cmds(j));
+                    end
                 end
             end
         end
@@ -116,7 +118,7 @@ classdef agent < handle
             obj.attached = false;
         end
         
-        % METHODS: control
+        % METHODS: voronoi cell
         
         function computeVoronoiCell(obj)
             % discretize a circular space around the agent. Set to 1 the
@@ -143,13 +145,32 @@ classdef agent < handle
             obj.Voronoi_cell = cell;
         end
         
+        function mass = computeVoronoiCellMass(obj, density_function)
+            % approximation of every point as a trapezoid multiplied by the
+            % density function
+            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
+            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            mass = 0;
+            for i = 1:size(obj.Voronoi_cell, 1)
+                for j = 1:size(obj.Voronoi_cell, 2)
+                    if(obj.Voronoi_cell(i,j) == 1)
+                        rho = res_rho * i;
+                        phi = j * res_phi;
+                        s_base = 2 * (rho - res_rho / 2) * sin(res_phi / 2);
+                        b_base = 2 * (rho + res_rho / 2) * sin(res_phi / 2);
+                        mass = mass + density_function(rho, phi) * ... 
+                            (s_base + b_base) * res_rho / 2;
+                    end
+                end
+            end   
+        end
+        
+        % METHODS: auxiliary    
         
         function r = isInsideRectLoad(obj) 
             % check weather the agent is within the designated area
             r = isInside(obj.load_box, obj.position);
         end
-        
-        % METHODS: auxiliary
         
         function Neighbour_local = getNeighboursLocalPosition(obj)
             % return the Neighbours positions in local coordinates
