@@ -19,7 +19,8 @@ classdef flock < handle
             end
         end
         
-        function moveAgent(obj,index, velocity)
+        function moveAgent(obj, index, velocity)
+            % move a specific agent
             if(index < obj.n_agents)
                 obj.agents(index).move(velocity);
             end
@@ -56,8 +57,18 @@ classdef flock < handle
         end
         
         function computeVoronoiTessellation(obj)
+            % compute the Voronoi tessellation of a discretization of the
+            % nearby area for every agent in the flock
             for a = obj.agents
                 a.computeVoronoiCell(); 
+            end
+        end
+        
+        function centroids = computeVoronoiCentroids(obj)
+            % compute the centroid of every agent voronoi cell
+            centroids = zeros(obj.n_agents, 2);
+            for i = 1:obj.n_agents
+                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroid(); 
             end
         end
         
@@ -75,9 +86,20 @@ classdef flock < handle
         end
         
         function plotVoronoiTessellation(obj)
+            % plot the limit perimeter of the Voronoi cells of every robot
             hold on
             for a = obj.agents
                 a.plotVoronoiCellFast([rand,rand,rand]); 
+            end
+            hold off
+        end
+        
+        function plotCentroids(obj)
+            hold on
+            for a = obj.agents
+                c = a.position' + a.centroid;
+                plot([a.position(1), c(1)],[a.position(2), c(2)],'r');
+                plot(c(1),c(2), 'xb');
             end
             hold off
         end

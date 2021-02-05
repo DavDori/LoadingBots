@@ -16,6 +16,7 @@ classdef agent < handle
         msg_in
         Neighbours % positions and names of in range agents
         Voronoi_cell double {mustBeNumeric} % discretization of the space arount the agent
+        centroid (1,2) double {mustBeNumeric} % relative direction of the centroid
     end
     
     methods
@@ -31,27 +32,7 @@ classdef agent < handle
             obj.Neighbours = [];
             obj.Voronoi_cell = zeros(param.N_rho, param.N_phi); 
         end
-        
-        % SETTERS
-        function set.attached(obj, v)
-            obj.attached = v;
-        end
-        function set.msg_in(obj, text)
-            obj.msg_in = text;
-        end
-        function set.position(obj, pos)
-            obj.position = pos;
-        end
-        function set.Ts(obj, t)
-            obj.Ts = t;
-        end
-        function set.Neighbours(obj, info)
-            obj.Neighbours = info;
-        end
-        function set.Voronoi_cell(obj, v_cell)
-            obj.Voronoi_cell = v_cell;
-        end
-        
+              
         % METHODS: communication
         
         function clearComms(obj)  % clear the comm buffer
@@ -165,6 +146,19 @@ classdef agent < handle
             end   
         end
         
+        function c = computeVoronoiCellCentroid(obj)
+            % compute the centroid of the Voronoi cell 
+            fun_x = @(rho,phi) rho * cos(phi);
+            fun_y = @(rho,phi) rho * sin(phi);
+            fun_m = @(rho,phi) 1; % density function
+            mass = computeVoronoiCellMass(obj, fun_m);
+            
+            x = computeVoronoiCellMass(obj, fun_x) / mass;
+            y = computeVoronoiCellMass(obj, fun_y) / mass;
+            c = [x,y];
+            obj.centroid = c;
+        end
+        
         % METHODS: auxiliary    
         
         function r = isInsideRectLoad(obj) 
@@ -227,6 +221,29 @@ classdef agent < handle
                 edges(i,:) = local2global(obj.position, local_p);
             end
             plot(edges(:,1), edges(:,2), 'Color', color);
+        end
+        
+        % SETTERS
+        function set.attached(obj, v)
+            obj.attached = v;
+        end
+        function set.msg_in(obj, text)
+            obj.msg_in = text;
+        end
+        function set.position(obj, pos)
+            obj.position = pos;
+        end
+        function set.Ts(obj, t)
+            obj.Ts = t;
+        end
+        function set.Neighbours(obj, info)
+            obj.Neighbours = info;
+        end
+        function set.Voronoi_cell(obj, v_cell)
+            obj.Voronoi_cell = v_cell;
+        end
+        function set.centroid(obj, c)
+            obj.centroid = c;
         end
     end
 end

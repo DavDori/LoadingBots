@@ -34,17 +34,13 @@ my_robot_army = flock(agents, loadObj, Ts);
 % check neighbour
 my_robot_army.meetNeighbours();
 my_robot_army.computeVoronoiTessellation();
-
-figure()
-grid on
-axis equal
-my_robot_army.plotVoronoiTessellation();
+centroids = my_robot_army.computeVoronoiCentroids();
 
 
 figure()
 grid on
 hold on
 my_robot_army.plot()
-my_robot_army.moveAgent(1,[1,1])
-my_robot_army.plot()
+my_robot_army.plotVoronoiTessellation();
+my_robot_army.plotCentroids();
 hold off
