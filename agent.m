@@ -39,13 +39,16 @@ classdef agent < handle
             obj.msg_in = [];
         end
         
-        function sendMessage(obj, other, text) % send a message to the other agent if it's within comm distance
+        
+        function sendMessage(obj, other, text) 
+            % send a message to the other agent if it's within comm distance
             q = obj.position - other.position;
             dist = sqrt(q' * q);
             if(obj.comm_range > dist)
                 other.msg_in = strcat(other.msg_in, text);
             end
         end
+        
         
         function decodeTextIn(obj)
             % takes the message that the agent recived and tries to decode
@@ -61,19 +64,31 @@ classdef agent < handle
             end
         end
         
+        
         function executeCmd(obj, cmd)
+            global index;
+            % decode and execute the commands
             exe = cell2mat(cmd);
             if(isempty(exe) == false)
                 if(exe(1) == 'N') % name of the agent
                     if(isempty(obj.Neighbours))
-                        obj.Neighbours = struct('name',exe(2:end), 'position', [0,0]);
+                        % init the structure
+                        obj.Neighbours = struct('name', exe(2:end), 'position', [0,0]);
+                        index = 1;
                     else
-                        obj.Neighbours(end+1) = struct('name',exe(2:end), 'position', [0,0]);
+                        % check if the neighbours have been already met 
+                        index = findStructFromName(obj.Neighbours, exe(2:end));
+                        if(isnan(index) == true)
+                            obj.Neighbours(end+1) = struct('name',exe(2:end), 'position', [0,0]);
+                            index = length(obj.Neighbours);
+                        end
+                        % else the index is stored in order to compute the
+                        % following commands
                     end
                 elseif(exe(1) == 'X') % x position of the agent
-                    obj.Neighbours(end).position(1) = str2double(exe(2:end));
+                    obj.Neighbours(index).position(1) = str2double(exe(2:end));
                 elseif(exe(1) == 'Y') % y position of the agent
-                    obj.Neighbours(end).position(2) = str2double(exe(2:end));
+                    obj.Neighbours(index).position(2) = str2double(exe(2:end));
                 end
             end
         end
@@ -85,6 +100,18 @@ classdef agent < handle
                 obj.position = obj.position + obj.Ts * velocity';
             else
                 obj.position = obj.position + obj.Ts * velocity;
+            end
+        end
+        
+        
+        function moveToCentroid(obj, kp)
+            % move the agent towards the previously calculated centroid
+            
+            if(isempty(obj.centroid) == false)
+                velocity = kp * obj.centroid; % centroid is in relative coordinates 
+                move(obj, velocity);
+            else
+                error('Trying to move towards centroid but it has not been computed');
             end
         end
         
@@ -108,6 +135,7 @@ classdef agent < handle
             % define resolution of the angle and radius
             res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
             res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            offset = 0.2;
             
             Neighbours_local_position = getNeighboursLocalPosition(obj);
             cell = zeros(size(obj.Voronoi_cell));
@@ -118,9 +146,12 @@ classdef agent < handle
                     rho = i * res_rho;
                     phi = j * res_phi;
                     [x, y] = polar2cartesian(rho,phi);
-                    point = [x, y];
-                    cell(i,j) = ...
+                    point = [x; y];
+                    
+                    if(isInside(obj.load_box, obj.position + point, offset))
+                        cell(i,j) = ...
                         isCloser(Neighbours_local_position, point);
+                    end
                 end
             end
             obj.Voronoi_cell = cell;
@@ -155,15 +186,16 @@ classdef agent < handle
             
             x = computeVoronoiCellMass(obj, fun_x) / mass;
             y = computeVoronoiCellMass(obj, fun_y) / mass;
-            c = [x,y];
+            c = [x;y];
             obj.centroid = c;
+
         end
         
         % METHODS: auxiliary    
         
         function r = isInsideRectLoad(obj) 
             % check weather the agent is within the designated area
-            r = isInside(obj.load_box, obj.position);
+            r = isInside(obj.load_box, obj.position, 0);
         end
         
         function Neighbour_local = getNeighboursLocalPosition(obj)
@@ -185,6 +217,7 @@ classdef agent < handle
             else
                 plot(obj.position(1), obj.position(2), 'or')
             end
+            circle(obj.position(1), obj.position(2), obj.dimension);
             hold off
         end
         

@@ -22,21 +22,36 @@ agents(2) = agent('Pluto',[0.6;0.7], param, loadObj);
 agents(3) = agent('Gerlad',[1.2;0.7],param, loadObj);
 agents(4) = agent('Leila',[0.7;1.1], param, loadObj);
 
-agents(1).attach();
-agents(2).attach();
-agents(3).attach();
-agents(4).attach();
 
 Ts = 10e-2;
+sim_time = 2;
 
+% init the flock of robots
 my_robot_army = flock(agents, loadObj, Ts);
 
 % check neighbour
 my_robot_army.meetNeighbours();
 my_robot_army.computeVoronoiTessellation();
-centroids = my_robot_army.computeVoronoiCentroids();
+my_robot_army.computeVoronoiCentroids();
 
+% starting position
+figure()
+grid on
+hold on
+my_robot_army.plot()
+my_robot_army.plotVoronoiTessellation();
+my_robot_army.plotCentroids();
+hold off
 
+my_robot_army.spreadUnderCargo(round(sim_time / Ts));
+
+my_robot_army.attachAll();
+
+if(my_robot_army.checkBalance() == false)
+    error("out of balance!!!")
+end
+
+% starting position
 figure()
 grid on
 hold on

@@ -47,10 +47,19 @@ classdef rect_load
                  sin(theta), cos(theta)];
         end
         
-        function flag = isInside(obj, absolute_point) % check weather a point is inside the rectangle or not
+        function pos = getLimitPosition(obj, pos_global_1, pos_global_2)
+            pos_local_1 = rotationMatrix(obj)' * (pos_global_1 - obj.center);
+            pos_local_2 = rotationMatrix(obj)' * (pos_global_2 - obj.center);
+            pos = 0;
+        end
+        
+        function flag = isInside(obj, absolute_point, offset) 
+            % check weather a point is inside the rectangle or not
             local_point = rotationMatrix(obj)' * (absolute_point - obj.center);
-            inVertical = local_point(2) < obj.dimension(2) / 2 && local_point(2) > -obj.dimension(2) / 2; 
-            inOrizontal = local_point(1) < obj.dimension(1) / 2 && local_point(1) > -obj.dimension(1) / 2;
+            inVertical = local_point(2) < offset + obj.dimension(2) / 2 &&...
+                         local_point(2) > -offset - obj.dimension(2) / 2; 
+            inOrizontal = local_point(1) < offset + obj.dimension(1) / 2 &&...
+                          local_point(1) > -offset - obj.dimension(1) / 2;
             flag = inVertical && inOrizontal;
         end
         

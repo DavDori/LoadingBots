@@ -4,7 +4,7 @@ classdef flock < handle
     
     properties
         agents agent
-        my_load rect_load
+        cargo rect_load
         n_agents (1,1) double {mustBeNumeric}
     end
     
@@ -13,9 +13,16 @@ classdef flock < handle
             %FLOCK 
             obj.agents = agents_array;
             obj.n_agents = length(agents_array);
-            obj.my_load = box;
+            obj.cargo = box;
             for a = obj.agents
                 a.Ts = sampling_time;
+            end
+        end
+        
+        function attachAll(obj)
+            % attach all the agents on the board
+            for a = obj.agents
+                a.attach(); 
             end
         end
         
@@ -29,20 +36,21 @@ classdef flock < handle
         function flag = checkBalance(obj)
             % check if the load should be falling
             points = zeros([obj.n_agents, 2]);
-            n = 1;
-            for i = 1:nodes
+            n = 0;
+            for i = 1:obj.n_agents
                 if(obj.agents(i).attached == true) % considers only attached agents
-                    points(n,:) = obj.agents(i).position';
                     n = n + 1;
+                    points(n,:) = obj.agents(i).position';
                 end
             end
-            flag = obj.my_load.isBalanced(points);
+            flag = obj.cargo.isBalanced(points(1:n,:));
         end
         
         function meetNeighbours(obj)
             for i = 1:obj.n_agents
                 for j = 1:obj.n_agents
                     if(i ~= j)
+                        % string to send
                         mex = strcat('N', obj.agents(i).name, ...
                                      ',X', num2str(obj.agents(i).position(1)),...
                                      ',Y', num2str(obj.agents(i).position(2)), ';');
@@ -72,13 +80,35 @@ classdef flock < handle
             end
         end
         
+        
+        function moveToCentroids(obj)
+            % move all the agents in direction of their centroids for a
+            % sampling time.
+            kp = 4;
+            for a = obj.agents
+                a.moveToCentroid(kp); 
+            end
+        end
+        
+        function spreadUnderCargo(obj, steps)
+            % distributed maximum coverage application
+            % update the position of the neighbours
+            for i = 1:steps
+                obj.meetNeighbours(); 
+                obj.computeVoronoiTessellation();
+                obj.computeVoronoiCentroids();
+                obj.moveToCentroids();
+            end
+        end
+            
+        
         % METHODS: representation
         
         function plot(obj)
             % representation in a 2D plane of the agents and the load
             hold on
             axis equal
-            obj.my_load.plot('r')
+            obj.cargo.plot('r')
             for a = obj.agents
                 a.plot();
             end
