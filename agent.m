@@ -7,7 +7,9 @@ classdef agent < handle
         position (2,1) double {mustBeNumeric}   % absolute coordinates
         dimension (1,1) double {mustBeNumeric}  % agent as a circle 
         attached (1,1) logical % is the agent attached to the load? 
-        load_box rect_load % object representing the load the agents have to move around
+        
+        cargo rect_load % object representing the load the agents have to move around
+        map binaryOccupancyMap % map where the agent is working (needed for simulations)
         
         Ts (1,1) double {mustBeNumeric} % sampling time
         comm_range (1,1) double {mustBeNumeric} % max range to an agent that enables communication
@@ -20,10 +22,11 @@ classdef agent < handle
     end
     
     methods
-        function obj = agent(name, init_position, param, box)
+        function obj = agent(name, init_position, param, cargo, map)
             obj.name = name;
             obj.position = init_position;
-            obj.load_box = box;
+            obj.cargo = cargo;
+            obj.map = map;
             obj.dimension = param.radius;
             obj.comm_range = param.comm_range;
             obj.lidar_range = param.range;
@@ -62,6 +65,10 @@ classdef agent < handle
                     end
                 end
             end
+        end
+        
+        function clearNeighbours(obj)
+            obj.Neighbours = []; 
         end
         
         
@@ -128,28 +135,57 @@ classdef agent < handle
         
         % METHODS: voronoi cell
         
+        function s = scan(obj)
+            % scan the nearby area using a lidar sensor
+            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            s = zeros(size(obj.Voronoi_cell, 2),2);
+
+            for n = 1:size(obj.Voronoi_cell, 2)
+                % the current orientation of the rover isn't available in
+                % the current version of the code, so it is set to 0°,
+                % always facing right. 
+                phi = n * res_phi;
+                pose = [obj.position', 0]; 
+                point = rayIntersection(obj.map, pose, phi, obj.lidar_range);
+                
+                if(isnan(point(1)) == true && isnan(point(2)) == true)
+                    % no collisions
+                    s(n) = obj.lidar_range;
+                else
+                    % consider the first point of collision
+                    point_local = (point - obj.position');
+                    s(n,1) = sqrt(point_local * point_local'); % save the distance
+                end
+                s(n,2) = phi;
+            end
+        end
+        
         function computeVoronoiCell(obj)
             % discretize a circular space around the agent. Set to 1 the
             % point closer to the agent and to 0 those closer to the
             % neighbour agents.
             % define resolution of the angle and radius
+            agent_scan = scan(obj);
+            
             res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
             res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
-            offset = 0.2;
-            
+            offset = 0.2; %[m] cargo offset so that the agent doesn't exeed the perimeter
+                        
+                        
             Neighbours_local_position = getNeighboursLocalPosition(obj);
             cell = zeros(size(obj.Voronoi_cell));
             
             % for every point in the cell check if it's closer to agent
-            for i = 1:size(obj.Voronoi_cell, 1)
-                for j = 1:size(obj.Voronoi_cell, 2)
-                    rho = i * res_rho;
-                    phi = j * res_phi;
+            for i = 1:size(obj.Voronoi_cell, 2) % for every angle
+                distance_index = ceil(agent_scan(i,1) / res_rho);
+                for j = 1:distance_index % for some radius
+                    rho = j * res_rho;
+                    phi = i * res_phi;
                     [x, y] = polar2cartesian(rho,phi);
                     point = [x; y];
                     
-                    if(isInside(obj.load_box, obj.position + point, offset))
-                        cell(i,j) = ...
+                    if(isInside(obj.cargo, obj.position + point, offset))
+                        cell(j,i) = ...
                         isCloser(Neighbours_local_position, point);
                     end
                 end
@@ -177,25 +213,36 @@ classdef agent < handle
             end   
         end
         
-        function c = computeVoronoiCellCentroid(obj)
-            % compute the centroid of the Voronoi cell 
-            fun_x = @(rho,phi) rho * cos(phi);
-            fun_y = @(rho,phi) rho * sin(phi);
-            fun_m = @(rho,phi) 1; % density function
+        
+        function c = computeVoronoiCellCentroid(obj, fun_m)
+            % compute the centroid of the Voronoi cell considering a
+            % mass function
+           
+            fun_x = @(rho,phi) rho * cos(phi) * fun_m(rho,phi);
+            fun_y = @(rho,phi) rho * sin(phi) * fun_m(rho,phi);
             mass = computeVoronoiCellMass(obj, fun_m);
             
             x = computeVoronoiCellMass(obj, fun_x) / mass;
             y = computeVoronoiCellMass(obj, fun_y) / mass;
             c = [x;y];
             obj.centroid = c;
-
+        end
+        
+        function c = computeVoronoiCellCentroidOpt(obj)
+            %compute the voroni cell with a density function that increases
+            %the more distant is the point to the center of mass of the
+            %load
+            ref = obj.position - (obj.cargo.center + obj.cargo.center_mass);
+            fun_m = @(rho,phi) 10 * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
+                * (rho * [cos(phi);sin(phi)] + ref));
+            c = computeVoronoiCellCentroid(obj, fun_m);
         end
         
         % METHODS: auxiliary    
         
         function r = isInsideRectLoad(obj) 
             % check weather the agent is within the designated area
-            r = isInside(obj.load_box, obj.position, 0);
+            r = isInside(obj.cargo, obj.position, 0);
         end
         
         function Neighbour_local = getNeighboursLocalPosition(obj)
@@ -221,7 +268,7 @@ classdef agent < handle
             hold off
         end
         
-        function plotVoronoiCell(obj, color)
+        function plotVoronoiCell(obj)
             hold on
             res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
             res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
@@ -233,7 +280,7 @@ classdef agent < handle
                         [x_local,y_local] = polar2cartesian(i * res_rho, j * res_phi);
                         local_p = [x_local, y_local]';
                         global_p = local2global(obj.position, local_p);
-                        
+                        color = [1,1,1] * obj.Voronoi_cell(i,j) / max(obj.Voronoi_cell);
                         plot(global_p(1),global_p(2), strcat('o',color));
                     end
                 end

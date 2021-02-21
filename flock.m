@@ -46,7 +46,9 @@ classdef flock < handle
             flag = obj.cargo.isBalanced(points(1:n,:));
         end
         
-        function meetNeighbours(obj)
+        function sendNamePosition(obj)
+            % every agent send a message to its neighbours containing name
+            % and its absolute coordinates
             for i = 1:obj.n_agents
                 for j = 1:obj.n_agents
                     if(i ~= j)
@@ -58,7 +60,14 @@ classdef flock < handle
                     end
                 end
             end
+        end
+        
+        function meetNeighbours(obj)
+            % send message to each agent and decode it so that every agent
+            % will know its neighbours position.
+            sendNamePosition(obj);
             for agent = obj.agents
+                agent.clearNeighbours();
                 agent.decodeTextIn();
                 agent.clearComms();
             end
@@ -72,14 +81,25 @@ classdef flock < handle
             end
         end
         
-        function centroids = computeVoronoiCentroids(obj)
+        function centroids = computeVoronoiCentroids(obj, fun_m)
             % compute the centroid of every agent voronoi cell
             centroids = zeros(obj.n_agents, 2);
+            if(nargin == 1)
+                fun_m = @(rho,phi) 1;
+            end
             for i = 1:obj.n_agents
-                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroid(); 
+                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroid(fun_m);
             end
         end
         
+        function centroids = computeVoronoiCentroidsOpt(obj)
+            % compute the centroid of every agent voronoi cell
+            centroids = zeros(obj.n_agents, 2);
+
+            for i = 1:obj.n_agents
+                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidOpt();
+            end
+        end
         
         function moveToCentroids(obj)
             % move all the agents in direction of their centroids for a
@@ -93,10 +113,11 @@ classdef flock < handle
         function spreadUnderCargo(obj, steps)
             % distributed maximum coverage application
             % update the position of the neighbours
+
             for i = 1:steps
                 obj.meetNeighbours(); 
                 obj.computeVoronoiTessellation();
-                obj.computeVoronoiCentroids();
+                obj.computeVoronoiCentroidsOpt();
                 obj.moveToCentroids();
             end
         end
@@ -120,6 +141,15 @@ classdef flock < handle
             hold on
             for a = obj.agents
                 a.plotVoronoiCellFast([rand,rand,rand]); 
+            end
+            hold off
+        end
+        
+        function plotVoronoiTessellationDetailed(obj)
+            % plot the Voronoi cells of every robot
+            hold on
+            for a = obj.agents
+                a.plotVoronoiCell(); 
             end
             hold off
         end
