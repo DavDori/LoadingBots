@@ -20,7 +20,7 @@ classdef rect_load
         function plot(obj, cmd) % draw the rectangle and center of mass
             hold on
             v = obj.computeVertexPositions();
-            center_mass_absolute = obj.center + rotationMatrix(obj) * obj.center_mass;
+            center_mass_absolute = obj.center + rotationMatrix(obj.orientation) * obj.center_mass;
             plot([v(1,1),v(2,1)], [v(1,2),v(2,2)], cmd);
             plot([v(2,1),v(3,1)], [v(2,2),v(3,2)], cmd);
             plot([v(3,1),v(4,1)], [v(3,2),v(4,2)], cmd);
@@ -35,27 +35,21 @@ classdef rect_load
             v2 = [-obj.dimension(1) / 2, +obj.dimension(2) / 2]';
             v3 = [+obj.dimension(1) / 2, +obj.dimension(2) / 2]';
             v4 = [+obj.dimension(1) / 2, -obj.dimension(2) / 2]';
-            r(1,1:2) = obj.center + rotationMatrix(obj) * v1;
-            r(2,1:2) = obj.center + rotationMatrix(obj) * v2; 
-            r(3,1:2) = obj.center + rotationMatrix(obj) * v3; 
-            r(4,1:2) = obj.center + rotationMatrix(obj) * v4; 
+            r(1,1:2) = obj.center + rotationMatrix(obj.orientation) * v1;
+            r(2,1:2) = obj.center + rotationMatrix(obj.orientation) * v2; 
+            r(3,1:2) = obj.center + rotationMatrix(obj.orientation) * v3; 
+            r(4,1:2) = obj.center + rotationMatrix(obj.orientation) * v4; 
         end
-        
-        function R = rotationMatrix(obj)
-            theta = obj.orientation;
-            R = [cos(theta), -sin(theta);...
-                 sin(theta), cos(theta)];
-        end
-        
+                
         function pos = getLimitPosition(obj, pos_global_1, pos_global_2)
-            pos_local_1 = rotationMatrix(obj)' * (pos_global_1 - obj.center);
-            pos_local_2 = rotationMatrix(obj)' * (pos_global_2 - obj.center);
+            pos_local_1 = rotationMatrix(obj.orientation)' * (pos_global_1 - obj.center);
+            pos_local_2 = rotationMatrix(obj.orientation)' * (pos_global_2 - obj.center);
             pos = 0;
         end
         
         function flag = isInside(obj, absolute_point, offset) 
             % check weather a point is inside the rectangle or not
-            local_point = rotationMatrix(obj)' * (absolute_point - obj.center);
+            local_point = rotationMatrix(obj.orientation)' * (absolute_point - obj.center);
             inVertical = local_point(2) < offset + obj.dimension(2) / 2 &&...
                          local_point(2) > -offset - obj.dimension(2) / 2; 
             inOrizontal = local_point(1) < offset + obj.dimension(1) / 2 &&...
@@ -67,7 +61,7 @@ classdef rect_load
             % check if at least a triangle made with some contact points
             % has inside the center of mass.
             n = size(contact_points,1); % number of contact points
-            center_mass_absolute = (obj.center + rotationMatrix(obj) * obj.center_mass)';
+            center_mass_absolute = (obj.center + rotationMatrix(obj.orientation) * obj.center_mass)';
             flag = false;
             if(n > 2) 
                 for i = 1:n

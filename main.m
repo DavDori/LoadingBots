@@ -4,8 +4,7 @@ clc
 %% SET UP
 
 % map
-map = png2BOMap('map_test_1.png',200);
-%map = binaryOccupancyMap(10,10,20);
+map = png2BOMap('map_test_1.png',15);
 % load
 center = [1;1];             % [m]
 center_mass = [0;0];        % [m]
@@ -39,6 +38,7 @@ my_robot_army.meetNeighbours();
 my_robot_army.computeVoronoiTessellation();
 my_robot_army.computeVoronoiCentroids();
 
+
 %% starting position plot
 
 figure()
@@ -50,6 +50,9 @@ my_robot_army.plot()
 my_robot_army.plotVoronoiTessellation();
 my_robot_army.plotCentroids();
 hold off
+cmds = [0.3,0;  0.1,-pi/10; 0.1,-pi/10;  0.1,-pi/10]; 
+
+path = my_robot_army.setTrajectory(cmds);
 
 %% setting up operation
 
@@ -69,4 +72,5 @@ show(map)
 my_robot_army.plot()
 my_robot_army.plotVoronoiTessellation();
 my_robot_army.plotCentroids();
+plotPath(path);
 hold off

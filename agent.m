@@ -238,6 +238,16 @@ classdef agent < handle
             c = computeVoronoiCellCentroid(obj, fun_m);
         end
         
+        % METHODS: path planning
+        
+        function way_point = computeWayPoint(obj, cargo_final_position)
+            % compute the relative position that the agent should reach the
+            % input pose has to be structured as [x; y; theta]
+            delta_position = obj.position - obj.cargo.center;
+            delta_angle = cargo_final_position(3) - obj.cargo.orientation; 
+            way_point = cargo_final_position(1:2) + rotationMatrix(delta_angle) * delta_position;
+        end
+        
         % METHODS: auxiliary    
         
         function r = isInsideRectLoad(obj) 

@@ -123,6 +123,21 @@ classdef flock < handle
         end
             
         
+        function waypoints = setTrajectory(obj, cmds)
+            % calculate the waypoints given a set of commands. The motion
+            % is modeled as a unicycle and the starting position is the
+            % current position of the cargo center. The output is a
+            % sequence of n points
+            % Note: cmds structure: [v, w] and time is considered as 1 unit
+            n = size(cmds,1); % rows
+            waypoints = zeros(n, 3); % [x,y,theta]
+            prev = [obj.agents(1).cargo.center; obj.agents(1).cargo.orientation]'; % initial pose
+            for i = 1:n
+                waypoints(i,:) = prev + unicycleModel(cmds(i,:), prev)';
+                prev = waypoints(i,:);
+            end
+        end
+                
         % METHODS: representation
         
         function plot(obj)
