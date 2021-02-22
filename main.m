@@ -25,8 +25,6 @@ agents(3) = agent('Gerlad',[1.5;0.5],param, cargo, map);
 agents(4) = agent('Leila',[0.5;1.5], param, cargo, map);
 agents(5) = agent('Samuel',[1;1], param, cargo, map);
 
-%agents = agent('Tester',[2;1], param, cargo, map);
-
 Ts = 10e-2;
 sim_time = 2;
 

@@ -135,9 +135,14 @@ classdef agent < handle
         
         % METHODS: voronoi cell
         
+        function [rho_res, phi_res] = getCellResolution(obj)
+            rho_res = obj.lidar_range / size(obj.Voronoi_cell, 1);
+            phi_res = 2 * pi / size(obj.Voronoi_cell, 2);
+        end
+        
         function s = scan(obj)
-            % scan the nearby area using a lidar sensor
-            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            % simulate a scan of the nearby area using a lidar sensor
+            [~, res_phi] = getCellResolution(obj);
             s = zeros(size(obj.Voronoi_cell, 2),2);
 
             for n = 1:size(obj.Voronoi_cell, 2)
@@ -167,11 +172,9 @@ classdef agent < handle
             % define resolution of the angle and radius
             agent_scan = scan(obj);
             
-            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
-            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            [res_rho, res_phi] = getCellResolution(obj);
             offset = 0.2; %[m] cargo offset so that the agent doesn't exeed the perimeter
-                        
-                        
+                              
             Neighbours_local_position = getNeighboursLocalPosition(obj);
             cell = zeros(size(obj.Voronoi_cell));
             
@@ -184,20 +187,26 @@ classdef agent < handle
                     [x, y] = polar2cartesian(rho,phi);
                     point = [x; y];
                     
-                    if(isInside(obj.cargo, obj.position + point, offset))
-                        cell(j,i) = ...
-                        isCloser(Neighbours_local_position, point);
-                    end
+                    cell(j,i) = pointDomainCheck(obj, point, Neighbours_local_position, offset);
                 end
             end
             obj.Voronoi_cell = cell;
         end
         
+        function status = pointDomainCheck(obj, point, Neighbours, offset)
+            % compute the point domain given some conditions
+            if(isInside(obj.cargo, obj.position + point, offset))
+                agents_size = obj.dimension; % consider the same size for all the agents
+                status = isCloser(Neighbours, point, agents_size);
+            else
+                status = 0;
+            end
+        end
+        
         function mass = computeVoronoiCellMass(obj, density_function)
             % approximation of every point as a trapezoid multiplied by the
             % density function
-            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
-            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            [res_rho, res_phi] = getCellResolution(obj);
             mass = 0;
             for i = 1:size(obj.Voronoi_cell, 1)
                 for j = 1:size(obj.Voronoi_cell, 2)
@@ -280,8 +289,7 @@ classdef agent < handle
         
         function plotVoronoiCell(obj)
             hold on
-            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
-            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            [res_rho, res_phi] = getCellResolution(obj);
             
             for i = 1:size(obj.Voronoi_cell, 1) % rho
                 for j = 1:size(obj.Voronoi_cell, 2) % phi
@@ -300,8 +308,7 @@ classdef agent < handle
         
         function plotVoronoiCellFast(obj, color)
             % consider only the outter perimeter of the cell
-            res_rho = obj.lidar_range / size(obj.Voronoi_cell, 1);
-            res_phi = 2 * pi / size(obj.Voronoi_cell, 2);
+            [res_rho, res_phi] = getCellResolution(obj);
             edges = zeros(size(obj.Voronoi_cell, 2), 2); 
             
             for i = 1:size(obj.Voronoi_cell, 2) % rho
