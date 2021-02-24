@@ -19,6 +19,7 @@ classdef flock < handle
             end
         end
         
+        
         function attachAll(obj)
             % attach all the agents on the board
             for a = obj.agents
@@ -26,12 +27,14 @@ classdef flock < handle
             end
         end
         
+        
         function moveAgent(obj, index, velocity)
             % move a specific agent
             if(index < obj.n_agents)
                 obj.agents(index).move(velocity);
             end
         end
+        
         
         function flag = checkBalance(obj)
             % check if the load should be falling
@@ -45,6 +48,7 @@ classdef flock < handle
             end
             flag = obj.cargo.isBalanced(points(1:n,:));
         end
+        
         
         function sendNamePosition(obj)
             % every agent send a message to its neighbours containing name
@@ -62,6 +66,7 @@ classdef flock < handle
             end
         end
         
+        
         function meetNeighbours(obj)
             % send message to each agent and decode it so that every agent
             % will know its neighbours position.
@@ -73,13 +78,25 @@ classdef flock < handle
             end
         end
         
-        function computeVoronoiTessellation(obj)
+        
+        function computeVoronoiTessellationCargo(obj, offset)
             % compute the Voronoi tessellation of a discretization of the
-            % nearby area for every agent in the flock
+            % nearby area for every agent in the flock considering the
+            % perimeter of the cargo
             for a = obj.agents
-                a.computeVoronoiCell(); 
+                computeVoronoiCell(a, offset); 
             end
         end
+        
+        
+        function computeVoronoiTessellation(obj)
+            % compute the Voronoi tessellation of a discretization of the
+            % nearby area for every agent in the flock 
+            for a = obj.agents
+                computeVoronoiCell(a); 
+            end
+        end
+        
         
         function centroids = computeVoronoiCentroids(obj, fun_m)
             % compute the centroid of every agent voronoi cell
@@ -92,6 +109,7 @@ classdef flock < handle
             end
         end
         
+        
         function centroids = computeVoronoiCentroidsOpt(obj)
             % compute the centroid of every agent voronoi cell
             centroids = zeros(obj.n_agents, 2);
@@ -101,25 +119,52 @@ classdef flock < handle
             end
         end
         
-        function moveToCentroids(obj)
-            % move all the agents in direction of their centroids for a
-            % sampling time.
-            kp = 4;
-            for a = obj.agents
-                a.moveToCentroid(kp); 
+        function centroids = computeVoronoiCentroidsNav(obj, dest)
+            % compute the voronoi centroids for each agent considering a
+            % waypoint/destiantion to reach.
+            centroids = zeros(obj.n_agents, 2);
+            sf = 10;
+            for i = 1:obj.n_agents
+                % calculate the destination for each agent
+                dest_i = obj.agents(i).computeWayPoint(dest');
+                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidMovement(dest_i, sf);
             end
         end
+        
+        function moveToCentroids(obj, kp)
+            % move all the agents in direction of their centroids for a
+            % sampling time.
+            for a = obj.agents
+                centroid = a.centroid;
+                moveToCentroid(a, kp, centroid); 
+            end
+        end
+        
+        
+        function saveFormation(obj)
+            % save the robots positions relative to the cargo reference 
+            % frame, these positions should be the go to for every robot
+            % when performing the attach operation.
+            % the formation is saved with the reference frame of the cargo
+            for a = obj.agents
+                a.ideal_position = rotationMatrix(a.cargo.orientation) * (a.position - a.cargo.center);
+            end
+        end
+        
         
         function spreadUnderCargo(obj, steps)
             % distributed maximum coverage application
             % update the position of the neighbours
-
+            offset = 0.3;
             for i = 1:steps
                 obj.meetNeighbours(); 
-                obj.computeVoronoiTessellation();
-                obj.computeVoronoiCentroidsOpt();
-                obj.moveToCentroids();
+                obj.computeVoronoiTessellationCargo(offset);
+                obj.computeVoronoiCentroids(); %opt or not
+                obj.moveToCentroids(4);
             end
+            % save current positions of the agents as reference for the
+            % formation shape
+            obj.saveFormation();
         end
             
         
@@ -175,6 +220,20 @@ classdef flock < handle
                 c = a.position' + a.centroid;
                 plot([a.position(1), c(1)],[a.position(2), c(2)],'r');
                 plot(c(1),c(2), 'xb');
+            end
+            hold off
+        end
+        
+        
+        function plotAgentsPath(obj, path)
+            hold on
+            for a = obj.agents
+                path_agent = zeros(size(path) + [1,0]);
+                path_agent(1,:) = [a.position', 0];
+                for i = 1:size(path,1) % for every point in the path
+                    path_agent(i + 1,:) = [a.computeWayPoint(path(i,:)')', 0];
+                end
+                plotPath(path_agent);
             end
             hold off
         end

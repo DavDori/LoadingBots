@@ -19,6 +19,8 @@ classdef agent < handle
         Neighbours % positions and names of in range agents
         Voronoi_cell double {mustBeNumeric} % discretization of the space arount the agent
         centroid (1,2) double {mustBeNumeric} % relative direction of the centroid
+        
+        ideal_position (1,2) double {mustBeNumeric} % ideal position relative to the cargo reference frame
     end
     
     methods
@@ -111,11 +113,11 @@ classdef agent < handle
         end
         
         
-        function moveToCentroid(obj, kp)
-            % move the agent towards the previously calculated centroid
+        function moveToCentroid(obj, kp, centroid)
+            % move the agent towards the previously the given centroid
             
-            if(isempty(obj.centroid) == false)
-                velocity = kp * obj.centroid; % centroid is in relative coordinates 
+            if(isempty(centroid) == false)
+                velocity = kp * centroid; % centroid is in relative coordinates 
                 move(obj, velocity);
             else
                 error('Trying to move towards centroid but it has not been computed');
@@ -165,16 +167,20 @@ classdef agent < handle
             end
         end
         
-        function computeVoronoiCell(obj)
+        function computeVoronoiCell(obj, offset)
             % discretize a circular space around the agent. Set to 1 the
             % point closer to the agent and to 0 those closer to the
             % neighbour agents.
-            % define resolution of the angle and radius
+            % define resolution of the angle and radius.
+            % offset is defined so that the agent doesn't exeed the perimeter
+            % defined by the cargo. An empty offset value will ignore this
+            % operation
+            if(nargin < 2)
+                offset = [];
+            end
             agent_scan = scan(obj);
             
             [res_rho, res_phi] = getCellResolution(obj);
-            offset = 0.2; %[m] cargo offset so that the agent doesn't exeed the perimeter
-                              
             Neighbours_local_position = getNeighboursLocalPosition(obj);
             cell = zeros(size(obj.Voronoi_cell));
             
@@ -195,7 +201,11 @@ classdef agent < handle
         
         function status = pointDomainCheck(obj, point, Neighbours, offset)
             % compute the point domain given some conditions
-            if(isInside(obj.cargo, obj.position + point, offset))
+            
+            if(isempty(offset) == true)
+                agents_size = obj.dimension; % consider the same size for all the agents
+                status = isCloser(Neighbours, point, agents_size);  
+            elseif(isInside(obj.cargo, obj.position + point, offset))
                 agents_size = obj.dimension; % consider the same size for all the agents
                 status = isCloser(Neighbours, point, agents_size);
             else
@@ -242,8 +252,20 @@ classdef agent < handle
             %the more distant is the point to the center of mass of the
             %load
             ref = obj.position - (obj.cargo.center + obj.cargo.center_mass);
-            fun_m = @(rho,phi) 10 * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
+            gain = 10;
+            fun_m = @(rho,phi) gain * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
                 * (rho * [cos(phi);sin(phi)] + ref));
+            c = computeVoronoiCellCentroid(obj, fun_m);
+        end
+        
+        function c = computeVoronoiCellCentroidMovement(obj, dest, spread_factor)
+            % compute the centroid considering the robot wanted destination
+            % define distance function between destination and considered
+            % point
+            fun_dist = @(rho,phi) sqrt((rho * cos(phi) - dest(1))^2 + ...
+                                       (rho * sin(phi) - dest(2))^2);
+            % density exponential expression
+            fun_m = @(rho,phi) exp(-fun_dist(rho,phi) / spread_factor);
             c = computeVoronoiCellCentroid(obj, fun_m);
         end
         
@@ -341,6 +363,9 @@ classdef agent < handle
         end
         function set.centroid(obj, c)
             obj.centroid = c;
+        end
+        function set.ideal_position(obj, pos)
+            obj.ideal_position = pos; 
         end
     end
 end
