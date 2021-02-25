@@ -5,17 +5,17 @@ clc
 %% SET UP
 
 % map
-map = png2BOMap('map_test_1.png',18);
+map = png2BOMap('map_test_1.png',22);
 
 % Cargo
-center = [map.XWorldLimits(2) / 2 ; 2];             % [m]
+center = [map.XWorldLimits(2) / 2 ; 2]; % [m]
 center_mass = [0;0];        % [m]
 dimensions = [1.5; 1];      % [m]
 orientation = pi/2;         % [rad]
 
 % Agents
 param.range = 0.8;          % [m] max observable range
-param.comm_range = 1.0;     % [m] max connection distance
+param.comm_range = 2.0;     % [m] max connection distance
 param.radius = 0.1;         % [m] hitbox of the agent
 param.N_rho = 60;           % division of the radius for discretization
 param.N_phi = 60;           % division of the angle for discretization
@@ -46,7 +46,7 @@ grid on
 hold on
 axis equal
 show(map)
-my_robot_army.plot()
+my_robot_army.plot();
 my_robot_army.plotVoronoiTessellation();
 my_robot_army.plotCentroids();
 hold off
@@ -79,10 +79,22 @@ cmds = [0.3,0;  0.1,0; 0.1,0;  0.1,0];
 
 path = my_robot_army.setTrajectory(cmds);
 
-for i = 1:5
+figure()
+grid on
+hold on
+axis equal
+show(map)
+my_robot_army.plotAgentsPath(path(1:2,:));
+my_robot_army.plot()
+my_robot_army.plotCentroids();
+my_robot_army.plotVoronoiTessellation();
+hold off
+
+my_robot_army.setWayPoints(path(end,:));
+for i = 1:20
     my_robot_army.meetNeighbours(); 
     my_robot_army.computeVoronoiTessellation();
-    my_robot_army.computeVoronoiCentroidsNav(path(1,:));
+    my_robot_army.computeVoronoiCentroidsNav();
     my_robot_army.moveToCentroids(2);
 end
 
@@ -94,5 +106,4 @@ show(map)
 my_robot_army.plot()
 my_robot_army.plotCentroids();
 my_robot_army.plotVoronoiTessellation();
-my_robot_army.plotAgentsPath(path);
 hold off

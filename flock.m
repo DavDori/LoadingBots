@@ -119,17 +119,29 @@ classdef flock < handle
             end
         end
         
-        function centroids = computeVoronoiCentroidsNav(obj, dest)
-            % compute the voronoi centroids for each agent considering a
-            % waypoint/destiantion to reach.
-            centroids = zeros(obj.n_agents, 2);
-            sf = 10;
+        function setWayPoints(obj, dest)
+            % given the destination of the cargo, compute the waypoints of
+            % each agent
             for i = 1:obj.n_agents
                 % calculate the destination for each agent
                 dest_i = obj.agents(i).computeWayPoint(dest');
-                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidMovement(dest_i, sf);
+                fprintf('position of %s = [%f, %f]\n', obj.agents(i).name, dest_i);
             end
         end
+        
+        
+        function centroids = computeVoronoiCentroidsNav(obj)
+            % compute the voronoi centroids for each agent considering a
+            % waypoint/destiantion to reach. Before this operation, the
+            % waypoints should have been set.
+            centroids = zeros(obj.n_agents, 2);
+            sf = 1;
+            for i = 1:obj.n_agents
+                % calculate the destination for each agent
+                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidMovement(sf);
+            end
+        end
+        
         
         function moveToCentroids(obj, kp)
             % move all the agents in direction of their centroids for a
@@ -196,6 +208,7 @@ classdef flock < handle
             hold off
         end
         
+        
         function plotVoronoiTessellation(obj)
             % plot the limit perimeter of the Voronoi cells of every robot
             hold on
@@ -205,11 +218,20 @@ classdef flock < handle
             hold off
         end
         
+        
         function plotVoronoiTessellationDetailed(obj)
-            % plot the Voronoi cells of every robot
+            % plot the Voronoi cells of every robot considering every point
+            % of the cell
             hold on
             for a = obj.agents
-                a.plotVoronoiCell(); 
+                spread_factor = 1;
+                dest = a.position - 0.5; % for testing
+                fun_dist = @(rho,phi) sqrt((a.position(1) + rho * cos(phi) - dest(1))^2 + ...
+                                       (a.position(2) + rho * sin(phi) - dest(2))^2);
+                % density exponential expression
+                fun_d = @(rho,phi) exp(-fun_dist(rho,phi) / spread_factor);
+                
+                a.plotVoronoiCell(fun_d); 
             end
             hold off
         end
