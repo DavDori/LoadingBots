@@ -15,7 +15,7 @@ classdef agent < handle
         comm_range (1,1) double {mustBeNumeric} % max range to an agent that enables communication
         lidar_range (1,1) double {mustBeNumeric} % max distance at which an obstacle can be detected
         
-        msg_in
+        msg_in % recived message
         Neighbours % positions and names of in range agents
         Voronoi_cell double {mustBeNumeric} % discretization of the space arount the agent
         centroid (1,2) double {mustBeNumeric} % relative direction of the centroid
@@ -216,13 +216,11 @@ classdef agent < handle
             % for every point in the cell check if it's closer to agent
             for i = 1:size(obj.Voronoi_cell, 2) % for every angle
                 for j = 1:size(obj.Voronoi_cell, 1) % for some radius
-                    rho = j * res_rho;
-                    phi = i * res_phi;
-                    s_base = 2 * (rho - res_rho / 2) * sin(res_phi / 2);
-                    b_base = 2 * (rho + res_rho / 2) * sin(res_phi / 2);
-                    % mass of a cell point given by density * area
-                    cell(j,i) = cell(j,i) * fun_d(rho, phi) * ... 
-                            (s_base + b_base) * res_rho / 2;
+                    if(cell(j,i) > 0)
+                        rho = j * res_rho;
+                        phi = i * res_phi;
+                        cell(j,i) = fun_d(rho, phi);
+                    end
                 end
             end
         end
@@ -251,7 +249,7 @@ classdef agent < handle
             mass = 0;
             for i = 1:size(obj.Voronoi_cell, 1)
                 for j = 1:size(obj.Voronoi_cell, 2)
-                    if(obj.Voronoi_cell(i,j) == 1)
+                    if(obj.Voronoi_cell(i,j) > 0)
                         rho = res_rho * i;
                         phi = j * res_phi;
                         s_base = 2 * (rho - res_rho / 2) * sin(res_phi / 2);
@@ -279,7 +277,7 @@ classdef agent < handle
         end
         
         
-        function c = computeVoronoiCellCentroidAwayCenterMass(obj)
+        function c = computeVoronoiCellCentroidCenterMass(obj)
             %compute the voroni cell with a density function that increases
             %the more distant is the point to the center of mass of the
             %load
@@ -288,6 +286,32 @@ classdef agent < handle
             fun_d = @(rho,phi) gain * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
                 * (rho * [cos(phi);sin(phi)] + ref));
             c = computeVoronoiCellCentroid(obj, fun_d);
+        end
+        
+        
+        function applyVoronoiFarFromCargoDensity(obj)
+            % should give an equivalent result to computeVoronoiCellCentroidAwayCenterMass
+            ref = obj.position - (obj.cargo.center + obj.cargo.center_mass);
+            gain = 10;
+            fun_d = @(rho,phi) gain * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
+                * (rho * [cos(phi);sin(phi)] + ref));
+            new_density_cell = applyDensityOnVoronoiCell(obj, fun_d);
+            obj.Voronoi_cell = obj.Voronoi_cell + new_density_cell;
+        end
+        
+        
+        function applyVoronoiWayPointDensity(obj)
+            % compute the centroid considering the robot wanted destination
+            % define distance function between destination and considered
+            % point
+            fun_dx = @(rho,phi) obj.position(1) + rho * cos(phi) - obj.way_point(1);
+            fun_dy = @(rho,phi) obj.position(2) + rho * sin(phi) - obj.way_point(2);
+            
+            fun_dist = @(rho,phi) sqrt((fun_dx(rho,phi))^2 + (fun_dy(rho,phi))^2);
+            % density exponential expression
+            fun_d = @(rho,phi) exp(-fun_dist(rho,phi) / spread_factor);
+            new_density_cell = applyDensityOnVoronoiCell(obj, fun_d);
+            obj.Voronoi_cell = obj.Voronoi_cell + new_density_cell;
         end
         
         
@@ -348,22 +372,21 @@ classdef agent < handle
         end
         
         
-        function plotVoronoiCell(obj, fun_d)
+        function plotVoronoiCell(obj)
             % plot a detaild version of the voronoi cell considering a
             % density function applied on it
             hold on
             [res_rho, res_phi] = getCellResolution(obj);
-            cell = applyDensityOnVoronoiCell(obj, fun_d);
-            step = 2;
-            for i = 1:step:size(cell, 1) % rho
-                for j = 1:step:size(cell, 2) % phi
+            step = 3;
+            for i = 1:step:size(obj.Voronoi_cell, 1) % rho
+                for j = 1:step:size(obj.Voronoi_cell, 2) % phi
                     % represent every point of cell
-                    if(obj.Voronoi_cell(i,j) == 1)
+                    if(obj.Voronoi_cell(i,j) > 0)
                         [x_local,y_local] = polar2cartesian(i * res_rho, j * res_phi);
                         local_p = [x_local, y_local]';
                         global_p = local2global(obj.position, local_p);
                         
-                        color = [1,0,0] - [1,0,0] * cell(i,j) / max(cell, [], 'all');
+                        color = [1,1,1] - [1,0,1] * obj.Voronoi_cell(i,j) / max(obj.Voronoi_cell, [], 'all');
                         plot(global_p(1),global_p(2), 'o', 'Color', color);
                     end
                 end

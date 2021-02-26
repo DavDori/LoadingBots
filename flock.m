@@ -110,14 +110,24 @@ classdef flock < handle
         end
         
         
-        function centroids = computeVoronoiCentroidsOpt(obj)
-            % compute the centroid of every agent voronoi cell
+        function centroids = computeVoronoiCentroidsCenterMass(obj)
+            % compute the centroid of every agent voronoi cell so that all
+            % agents are prone to spread away from the center of mass
             centroids = zeros(obj.n_agents, 2);
 
             for i = 1:obj.n_agents
-                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidOpt();
+                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidCenterMass();
             end
         end
+        
+        
+        function applyFarFromCenterMassDensity(obj)
+            % for every robot apply the far from center of mass density
+            for a = obj.agents
+                a.applyVoronoiFarFromCargoDensity();
+            end
+        end
+        
         
         function setWayPoints(obj, dest)
             % given the destination of the cargo, compute the waypoints of
@@ -151,32 +161,19 @@ classdef flock < handle
                 moveToCentroid(a, kp, centroid); 
             end
         end
+                
         
-        
-        function saveFormation(obj)
-            % save the robots positions relative to the cargo reference 
-            % frame, these positions should be the go to for every robot
-            % when performing the attach operation.
-            % the formation is saved with the reference frame of the cargo
-            for a = obj.agents
-                a.ideal_position = rotationMatrix(a.cargo.orientation) * (a.position - a.cargo.center);
-            end
-        end
-        
-        
-        function spreadUnderCargo(obj, steps)
+        function spreadUnderCargo(obj, steps, offset)
             % distributed maximum coverage application
             % update the position of the neighbours
-            offset = 0.3;
+            kd = 4;
             for i = 1:steps
                 obj.meetNeighbours(); 
                 obj.computeVoronoiTessellationCargo(offset);
+                obj.applyFarFromCenterMassDensity();
                 obj.computeVoronoiCentroids(); %opt or not
-                obj.moveToCentroids(4);
+                obj.moveToCentroids(kd);
             end
-            % save current positions of the agents as reference for the
-            % formation shape
-            obj.saveFormation();
         end
             
         
@@ -192,6 +189,22 @@ classdef flock < handle
             for i = 1:n
                 waypoints(i,:) = prev + unicycleModel(cmds(i,:), prev)';
                 prev = waypoints(i,:);
+            end
+        end
+        
+        
+        function fixFormation(obj)
+            % should be computed after the flock has spread under the
+            % cargo. It saves the current positions of the agents in their
+            % ideal_position variable which is saved in the reference frame
+            % of the cargo
+            for a = obj.agents
+                if(a.attached == false)
+                    % if the agent is not attached, a warning is thrown
+                    fprintf('WARNING: %s is not attached \n', a.name); 
+                end
+                d_pos = a.position - a.cargo.center;
+                a.ideal_position = rotationMatrix(a.cargo.orientation) * d_pos;
             end
         end
                 
@@ -224,17 +237,11 @@ classdef flock < handle
             % of the cell
             hold on
             for a = obj.agents
-                spread_factor = 1;
-                dest = a.position - 0.5; % for testing
-                fun_dist = @(rho,phi) sqrt((a.position(1) + rho * cos(phi) - dest(1))^2 + ...
-                                       (a.position(2) + rho * sin(phi) - dest(2))^2);
-                % density exponential expression
-                fun_d = @(rho,phi) exp(-fun_dist(rho,phi) / spread_factor);
-                
-                a.plotVoronoiCell(fun_d); 
+                a.plotVoronoiCell(); 
             end
             hold off
         end
+        
         
         function plotCentroids(obj)
             hold on

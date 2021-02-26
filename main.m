@@ -33,12 +33,6 @@ sim_time = 2;
 % init the flock of robots
 my_robot_army = flock(agents, cargo, Ts);
 
-% check neighbour
-my_robot_army.meetNeighbours();
-my_robot_army.computeVoronoiTessellation();
-my_robot_army.computeVoronoiCentroids();
-
-
 %% starting position plot
 
 figure()
@@ -47,18 +41,21 @@ hold on
 axis equal
 show(map)
 my_robot_army.plot();
-my_robot_army.plotVoronoiTessellation();
-my_robot_army.plotCentroids();
 hold off
 
 %% setting up operation
 
-my_robot_army.spreadUnderCargo(round(sim_time / Ts));
+offset = 0.2; %[m] offset from the cargo perimeter
+
+my_robot_army.spreadUnderCargo(round(sim_time / Ts), offset);
 my_robot_army.attachAll();
 
 if(my_robot_army.checkBalance() == false)
     error("out of balance!!!")
 end
+% save current positions of the agents as reference for the
+% formation shape
+my_robot_army.fixFormation();
 
 %% ending position after spreading under the cargo
 figure()
@@ -67,13 +64,10 @@ hold on
 axis equal
 show(map)
 my_robot_army.plot()
-my_robot_army.plotVoronoiTessellation();
+my_robot_army.plotVoronoiTessellationDetailed();
 my_robot_army.plotCentroids();
 hold off
 
-for i = 1:my_robot_army.n_agents
-    my_robot_army.agents(i).ideal_position
-end
 %% movement towards a set position
 cmds = [0.3,0;  0.1,0; 0.1,0;  0.1,0]; 
 
