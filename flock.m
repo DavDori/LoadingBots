@@ -84,7 +84,8 @@ classdef flock < handle
             % nearby area for every agent in the flock considering the
             % perimeter of the cargo
             for a = obj.agents
-                computeVoronoiCell(a, offset); 
+                a.computeVoronoiCell();
+                a.applyVoronoiCargoLimits(offset);
             end
         end
         
@@ -98,33 +99,50 @@ classdef flock < handle
         end
         
         
-        function centroids = computeVoronoiCentroids(obj, fun_m)
+        function centroids = computeVoronoiCentroids(obj)
             % compute the centroid of every agent voronoi cell
             centroids = zeros(obj.n_agents, 2);
-            if(nargin == 1)
-                fun_m = @(rho,phi) 1;
-            end
             for i = 1:obj.n_agents
-                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroid(fun_m);
-            end
-        end
-        
-        
-        function centroids = computeVoronoiCentroidsCenterMass(obj)
-            % compute the centroid of every agent voronoi cell so that all
-            % agents are prone to spread away from the center of mass
-            centroids = zeros(obj.n_agents, 2);
-
-            for i = 1:obj.n_agents
-                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidCenterMass();
+                centroids(i,1:2) = obj.agents(i).Voronoi_cell.computeCentroid();
             end
         end
         
         
         function applyFarFromCenterMassDensity(obj)
-            % for every robot apply the far from center of mass density
+            % for every robot apply the far from center of mass density on
+            % the Voronoi cell
             for a = obj.agents
                 a.applyVoronoiFarFromCargoDensity();
+            end
+        end
+        
+        
+        function applyWayPointDensity(obj, sf)
+            % for every robot apply an exponential density function
+            % centered on its way point on the voronoi cell. 'sf' is the
+            % spread factor of the points
+            for a = obj.agents
+                a.applyVoronoiWayPointDensity(sf);
+            end
+        end
+        
+        
+        function applyIdealPointDensity(obj, sf)
+            % for every robot apply an exponential density function
+            % centered on its way point on the voronoi cell. 'sf' is the
+            % spread factor of the points
+            for a = obj.agents
+                a.applyVoronoiIdealPositionDensity(sf);
+            end
+        end
+        
+        
+        function applySinglePointDensity(obj, point, sf)
+            % for every robot apply an exponential density function
+            % centered on a common point on the voronoi cell. 'sf' is the
+            % spread factor of the point
+            for a = obj.agents
+                a.applyVoronoiPointDensity(point, sf);
             end
         end
         
@@ -140,25 +158,12 @@ classdef flock < handle
         end
         
         
-        function centroids = computeVoronoiCentroidsNav(obj)
-            % compute the voronoi centroids for each agent considering a
-            % waypoint/destiantion to reach. Before this operation, the
-            % waypoints should have been set.
-            centroids = zeros(obj.n_agents, 2);
-            sf = 1;
-            for i = 1:obj.n_agents
-                % calculate the destination for each agent
-                centroids(i,1:2) = obj.agents(i).computeVoronoiCellCentroidMovement(sf);
-            end
-        end
-        
-        
         function moveToCentroids(obj, kp)
             % move all the agents in direction of their centroids for a
             % sampling time.
             for a = obj.agents
-                centroid = a.centroid;
-                moveToCentroid(a, kp, centroid); 
+                centroid = a.Voronoi_cell.centroid;
+                a.moveToCentroid(kp, centroid); 
             end
         end
                 
@@ -171,7 +176,7 @@ classdef flock < handle
                 obj.meetNeighbours(); 
                 obj.computeVoronoiTessellationCargo(offset);
                 obj.applyFarFromCenterMassDensity();
-                obj.computeVoronoiCentroids(); %opt or not
+                obj.computeVoronoiCentroids();
                 obj.moveToCentroids(kd);
             end
         end
@@ -226,18 +231,18 @@ classdef flock < handle
             % plot the limit perimeter of the Voronoi cells of every robot
             hold on
             for a = obj.agents
-                a.plotVoronoiCellFast([rand,rand,rand]); 
+                a.Voronoi_cell.plotFast(a.position, [rand,rand,rand]); 
             end
             hold off
         end
         
         
-        function plotVoronoiTessellationDetailed(obj)
+        function plotVoronoiTessellationDetailed(obj, step)
             % plot the Voronoi cells of every robot considering every point
             % of the cell
             hold on
             for a = obj.agents
-                a.plotVoronoiCell(); 
+                a.Voronoi_cell.plot(a.position, step); 
             end
             hold off
         end
@@ -246,7 +251,7 @@ classdef flock < handle
         function plotCentroids(obj)
             hold on
             for a = obj.agents
-                c = a.position' + a.centroid;
+                c = a.position + a.Voronoi_cell.centroid;
                 plot([a.position(1), c(1)],[a.position(2), c(2)],'r');
                 plot(c(1),c(2), 'xb');
             end
@@ -265,6 +270,15 @@ classdef flock < handle
                 plotPath(path_agent);
             end
             hold off
+        end
+        
+        
+        function print(obj)
+            % print basic info on the agents
+            for a = obj.agents
+                a.print();
+                fprintf('\n');
+            end
         end
     end
 end
