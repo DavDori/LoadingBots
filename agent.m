@@ -184,9 +184,7 @@ classdef agent < handle
             fun_d = @(rho,phi) gain * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
                 * (rho * [cos(phi);sin(phi)] + ref));
             % apply density function to the actual voronoi cell
-            new_density_cell = obj.Voronoi_cell.applyDensity(fun_d);
-            
-            obj.Voronoi_cell.cell = obj.Voronoi_cell.cell + new_density_cell;
+            obj.Voronoi_cell.applyDensity(fun_d);
         end
         
         
@@ -202,9 +200,7 @@ classdef agent < handle
             % density exponential expression
             fun_d = @(rho,phi) exp(-fun_dist(rho,phi) / sf);
             % apply density
-            new_density_cell = obj.Voronoi_cell.applyDensity(fun_d);
-            
-            obj.Voronoi_cell.cell = obj.Voronoi_cell.cell + new_density_cell;
+            obj.Voronoi_cell.applyDensity(fun_d);
         end
         
         
@@ -226,7 +222,7 @@ classdef agent < handle
         
         
         function applyVoronoiCargoLimits(obj, offset)
-            obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset)
+            obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset);
         end
         
                 

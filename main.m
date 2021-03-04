@@ -30,28 +30,28 @@ agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2], param, cargo, map
 Ts = 10e-2;
 sim_time = 2;
 
+
+
 % init the flock of robots
-my_robot_army = flock(agents, cargo, Ts);
-%my_robot_army.print();
-
-my_robot_army.meetNeighbours(); 
-my_robot_army.computeVoronoiTessellationCargo(0.10);
-%my_robot_army.applyFarFromCenterMassDensity();
-%my_robot_army.applySinglePointDensity(cargo.center, 0.01);
-my_robot_army.computeVoronoiCentroids();
-
-my_robot_army.print();
-
-figure()
-grid on
-hold on
-axis equal
-show(map)
-my_robot_army.plotVoronoiTessellation();
-my_robot_army.plot()
-my_robot_army.plotCentroids();
-
-hold off
+% my_robot_army = flock(agents, cargo, Ts);
+% %my_robot_army.print();
+% 
+% my_robot_army.meetNeighbours(); 
+% my_robot_army.computeVoronoiTessellationCargo(0.10);
+% my_robot_army.applyFarFromCenterMassDensity();
+% my_robot_army.applySinglePointDensity(cargo.center, 0.01);
+% my_robot_army.computeVoronoiCentroids();
+% 
+% figure()
+% grid on
+% hold on
+% axis equal
+% show(map)
+% my_robot_army.plotVoronoiTessellation();
+% my_robot_army.plot()
+% my_robot_army.plotCentroids();
+% 
+% hold off
 
 %% starting position plot
 
@@ -128,3 +128,31 @@ hold off
 % my_robot_army.plotCentroids();
 % my_robot_army.plotVoronoiTessellation();
 % hold off
+
+%% TESTING SECTION
+% comment if not needed
+Testing_unit = tester(map, param, Ts, 1e-2);
+e = Testing_unit.centroidOmogeneus();
+if(e == false)
+    error('centroid test failed\n');
+else
+    fprintf('centroid test was successeful\n');
+end
+e = Testing_unit.collisionDetection(false);
+if(e == false)
+    error('collision test failed\n');
+else
+    fprintf('collision test was successeful\n');
+end
+e = Testing_unit.cargoLimits();
+if(e == false)
+    error('cargo limits test failed\n');
+else
+    fprintf('cargo limits test was successeful\n');
+end
+e = Testing_unit.moveToCentroid();
+if(e == false)
+    error('move to centroid test failed\n');
+else
+    fprintf('move to centroid test was successeful\n');
+end

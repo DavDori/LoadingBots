@@ -147,6 +147,15 @@ classdef flock < handle
         end
         
         
+        function applyConstantDensity(obj)
+            % for every robot apply a constant density at its Voronoi cell
+            % density
+            for a = obj.agents
+                a.Voronoi_cell.addConstantDensity();
+            end
+        end
+        
+        
         function setWayPoints(obj, dest)
             % given the destination of the cargo, compute the waypoints of
             % each agent

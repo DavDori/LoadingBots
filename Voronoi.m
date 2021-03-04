@@ -3,7 +3,8 @@ classdef Voronoi < handle
     %   Detailed explanation goes here
     
     properties
-        cell {mustBeNumeric}
+        cell {mustBeNumeric} % binary vision of the cell
+        cell_density {mustBeNumeric} % density of each element of the cell
         centroid {mustBeNumeric}
         rho_res {mustBeNumeric}
         phi_res {mustBeNumeric}
@@ -19,7 +20,7 @@ classdef Voronoi < handle
             obj.rho_n = rho_n;
             obj.phi_n = phi_n;
             [obj.rho_res, obj.phi_res] = getCellResolution(obj, max_range);
-            obj.initCell();
+            obj.initCells();
         end
         
         
@@ -40,7 +41,7 @@ classdef Voronoi < handle
             % offset is defined so that the agent doesn't exeed the perimeter
             % defined by the cargo. An empty offset value will ignore this
             % operation
-            initCell(obj);
+            initCells(obj);
             tmp_cell = obj.cell;
             % for every point in the cell check if it's closer to agent
             for i = 1:obj.phi_n % for every angle
@@ -58,7 +59,7 @@ classdef Voronoi < handle
         end
         
         
-        function applyCargoLimits(obj, agent_position, cargo, offset)
+        function tmp_cell = applyCargoLimits(obj, agent_position, cargo, offset)
             % for every point in the cell check if it's in the cargo domain
             % the cell value is kept, otherwise it's set to 0
             tmp_cell = obj.cell;
@@ -94,19 +95,33 @@ classdef Voronoi < handle
                     end
                 end
             end
+            obj.cell_density = obj.cell_density + tmp_cell;
+        end
+        
+        
+        function cell_tmp = addConstantDensity(obj, c)
+            % the calculation of the centroid depends on the cell_density.
+            % In the case of no specified density o constant density this
+            % function is used
+            if(nargin == 1)
+                c = 1;  %default value
+            end
+            cell_tmp = obj.cell * c;
+            obj.cell_density = obj.cell_density + cell_tmp;
         end
         
         
         function mass = computeCellMass(obj, fun_d)
             % approximation of every point as a trapezoid
             mass = 0;
+            
             for i = 1:obj.rho_n % for every radius
                 for j = 1:obj.phi_n % for every angle
                     rho = obj.rho_res * i;
                     phi = obj.phi_res * j;
                     s_base = 2 * (rho - obj.rho_res / 2) * sin(obj.phi_res / 2);
                     b_base = 2 * (rho + obj.rho_res / 2) * sin(obj.phi_res / 2);
-                    density = fun_d(rho, phi) * obj.cell(i,j);
+                    density = fun_d(rho, phi) * obj.cell_density(i,j);
                     mass = mass + density * (s_base + b_base) * obj.rho_res / 2;
                 end
             end   
@@ -130,9 +145,10 @@ classdef Voronoi < handle
         end
         
         
-        function initCell(obj)
+        function initCells(obj)
             % initialize the voronoi cell with zeros
             obj.cell = zeros(obj.rho_n, obj.phi_n);
+            obj.cell_density = obj.cell;
         end
         
         
@@ -147,8 +163,9 @@ classdef Voronoi < handle
                         [x_local,y_local] = polar2cartesian(i * obj.rho_res, j * obj.phi_res);
                         local_p = [x_local, y_local]';
                         global_p = local2global(position, local_p);
-
-                        color = [1,1,1] - [1,1,1] * obj.cell(i,j) / max(obj.cell, [], 'all');
+                        
+                        normalizer = obj.cell_density(i,j) / max(obj.cell_density, [], 'all');
+                        color = [1,1,1] - [1,1,1] * normalizer;
                         plot(global_p(1),global_p(2), '.', 'Color', color);
                     end
                 end
@@ -173,6 +190,9 @@ classdef Voronoi < handle
         % SETTERS methods
         function set.cell(obj, v_cell)
             obj.cell = v_cell;
+        end
+        function set.cell_density(obj, v_cell)
+            obj.cell_density = v_cell;
         end
         function set.centroid(obj, c)
             obj.centroid = c;
