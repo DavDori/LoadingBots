@@ -42,6 +42,60 @@ classdef tester
         end
         
         
+        function [flag_1, flag_2] = PointDensity(obj)
+            % first test: point density inside the robot area, max density
+            % should be on the point itsself;
+            
+            % second test: point density outside, max density sould be at
+            % maximum rho, in the direction of the point.
+            
+            center = [2 ; 2]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+
+            agents(1) = agent('001', cargo.center, obj.param, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts);
+            sf = 1;
+            % first test
+            point = center + obj.param.range / 2;
+            
+            robot_flock.computeVoronoiTessellation();
+            robot_flock.applySinglePointDensity(point, sf);
+            cell = robot_flock.agents(1).Voronoi_cell.cell_density;
+            [~, index] = max(cell(:));
+            [i, j] = ind2sub(size(cell), index);
+            
+            rho = i * robot_flock.agents(1).Voronoi_cell.rho_res;
+            phi = j * robot_flock.agents(1).Voronoi_cell.phi_res;
+            [dx, dy] = polar2cartesian(rho, phi);
+            p = robot_flock.agents(1).position + [dx; dy];
+            err_p = 10 * obj.max_error; % depends on the resolution of the cell
+            flag_1 = abs(p(1) - point(1)) < err_p &&...
+                        abs(p(2) - point(2)) < err_p;
+                    
+            % SECOND TEST
+            point_2 = center + obj.param.range * 1.5;
+            
+            robot_flock.computeVoronoiTessellation();
+            robot_flock.applySinglePointDensity(point_2, sf);
+            cell = robot_flock.agents(1).Voronoi_cell.cell_density;
+            [~, index] = max(cell(:));
+            [i, j] = ind2sub(size(cell), index);
+            
+            rho = i * robot_flock.agents(1).Voronoi_cell.rho_res;
+            phi = j * robot_flock.agents(1).Voronoi_cell.phi_res;
+            
+            phi_point = atan2(point_2(2) - center(2), point_2(1) - center(1));
+            check_rho = rho >= obj.param.range - obj.max_error;
+            % NOTE: atan2 returns a value between -pi and pi, on the other
+            % hand, the values are regarded as from 0 to 2pi
+            check_phi = abs(phi - phi_point) < obj.max_error * 10;
+            flag_2 = check_rho && check_phi;
+        end
+        
         function flag = moveToCentroid(obj)
             % test the movement of the robot. Given a the position of the
             % centroid and set the proportional parameter such that the
@@ -138,9 +192,49 @@ classdef tester
             % get the total amount of points
             p_tot = robot_flock.agents.Voronoi_cell.rho_n * robot_flock.agents.Voronoi_cell.phi_n;
             
-            flag = (p / p_tot < 1/4 + obj.max_error) && (p / p_tot < 1/4 - obj.max_error);
+            flag = (abs(p / p_tot - 1/4) < obj.max_error);
             % true -> test passed
             % false -> test failed
+        end
+        
+        
+        function runAll(obj)
+            e = obj.centroidOmogeneus();
+            if(e == false)
+                fprintf('centroid test: \t failed\n');
+            else
+                fprintf('centroid test: \t successeful\n');
+            end
+            e = obj.collisionDetection(false);
+            if(e == false)
+                fprintf('collision test: \t failed\n');
+            else
+                fprintf('collision test: \t successeful\n');
+            end
+            e = obj.cargoLimits();
+            if(e == false)
+                fprintf('cargo limits test: \t failed\n');
+            else
+                fprintf('cargo limits test: \t successeful\n');
+            end
+            e = obj.moveToCentroid();
+            if(e == false)
+                fprintf('move to centroid test: \t failed\n');
+            else
+                fprintf('move to centroid test: \t successeful\n');
+            end
+
+            [e1, e2] = obj.PointDensity();
+            if(e1 == false)
+                fprintf('point density first test: \t failed\n');
+            else
+                fprintf('point density first test: \t successeful\n');
+            end
+            if(e2 == false)
+                fprintf('point density second test: \t failed\n');
+            else
+                fprintf('point density second test: \t successeful\n');
+            end
         end
     end
 end

@@ -17,8 +17,8 @@ orientation = pi/2;         % [rad]
 param.range = 0.8;          % [m] max observable range
 param.comm_range = 2.0;     % [m] max connection distance
 param.radius = 0.1;         % [m] hitbox of the agent
-param.N_rho = 60;           % division of the radius for discretization
-param.N_phi = 60;           % division of the angle for discretization
+param.N_rho = 260;           % division of the radius for discretization
+param.N_phi = 260;           % division of the angle for discretization
 
 cargo = rect_load(center, center_mass, orientation, dimensions);
 agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5], param, cargo, map);
@@ -131,28 +131,6 @@ sim_time = 2;
 
 %% TESTING SECTION
 % comment if not needed
+fprintf('TESTING SECTION\n');
 Testing_unit = tester(map, param, Ts, 1e-2);
-e = Testing_unit.centroidOmogeneus();
-if(e == false)
-    error('centroid test failed\n');
-else
-    fprintf('centroid test was successeful\n');
-end
-e = Testing_unit.collisionDetection(false);
-if(e == false)
-    error('collision test failed\n');
-else
-    fprintf('collision test was successeful\n');
-end
-e = Testing_unit.cargoLimits();
-if(e == false)
-    error('cargo limits test failed\n');
-else
-    fprintf('cargo limits test was successeful\n');
-end
-e = Testing_unit.moveToCentroid();
-if(e == false)
-    error('move to centroid test failed\n');
-else
-    fprintf('move to centroid test was successeful\n');
-end
+Testing_unit.runAll();
