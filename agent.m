@@ -174,7 +174,7 @@ classdef agent < handle
             Neighbours_local_position = getNeighboursLocalPosition(obj);
             obj.Voronoi_cell.computeCell(agent_scan ,Neighbours_local_position, obj.dimension);
         end
-                      
+                 
         
         function applyVoronoiFarFromCargoDensity(obj)
             % should give an equivalent result to computeVoronoiCellCentroidAwayCenterMass

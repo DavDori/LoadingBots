@@ -88,14 +88,15 @@ classdef Voronoi < handle
             % for every point in the cell check if it's closer to agent
             for i = 1:obj.phi_n % for every angle
                 for j = 1:obj.rho_n % for some radius
-                    if(tmp_cell(j,i) > 0)
-                        rho = j * obj.rho_res;
-                        phi = i * obj.phi_res;
-                        tmp_cell(j,i) = fun_d(rho, phi);
-                    end
+                    rho = j * obj.rho_res;
+                    phi = i * obj.phi_res;
+                    tmp_cell(j,i) = fun_d(rho, phi) * obj.cell(j,i);
                 end
             end
-            obj.cell_density = obj.cell_density + tmp_cell;
+            % calculate the normalizer for the applied density
+            norm = sum(tmp_cell(:)); 
+            % update the current density
+            obj.cell_density = obj.cell_density + tmp_cell / norm;
         end
         
         
