@@ -3,7 +3,7 @@ close all
 clc
 
 %% SET UP
-
+st = [0;1.9]; % starting position offset
 % map
 map = png2BOMap('map_test_1.png',22);
 
@@ -17,120 +17,84 @@ orientation = pi/2;         % [rad]
 param.range = 0.8;          % [m] max observable range
 param.comm_range = 2.0;     % [m] max connection distance
 param.radius = 0.1;         % [m] hitbox of the agent
-param.N_rho = 260;           % division of the radius for discretization
-param.N_phi = 260;           % division of the angle for discretization
+param.N_rho = 60;           % division of the radius for discretization
+param.N_phi = 60;           % division of the angle for discretization
 
-cargo = rect_load(center, center_mass, orientation, dimensions);
-agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5], param, cargo, map);
-agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5], param, cargo, map);
-agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5],param, cargo, map);
-agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5], param, cargo, map);
-agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2], param, cargo, map);
+cargo = rect_load(st + center, center_mass, orientation, dimensions);
+agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5] + st, param, cargo, map);
+agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5] + st, param, cargo, map);
+agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5] + st, param, cargo, map);
+agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5] + st, param, cargo, map);
+agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2] + st, param, cargo, map);
 
 Ts = 10e-2;
 sim_time = 2;
 
-
-
 % init the flock of robots
-% my_robot_army = flock(agents, cargo, Ts);
-% %my_robot_army.print();
-% 
-% my_robot_army.meetNeighbours(); 
-% my_robot_army.computeVoronoiTessellationCargo(0.10);
-% my_robot_army.applyFarFromCenterMassDensity();
-% my_robot_army.applySinglePointDensity(cargo.center, 0.01);
-% my_robot_army.computeVoronoiCentroids();
-% 
-% figure()
-% grid on
-% hold on
-% axis equal
-% show(map)
-% my_robot_army.plotVoronoiTessellation();
-% my_robot_army.plot()
-% my_robot_army.plotCentroids();
-% 
-% hold off
+my_robot_army = flock(agents, cargo, Ts);
+
 
 %% starting position plot
 
-% figure()
-% grid on
-% hold on
-% axis equal
-% show(map)
-% my_robot_army.plot();
-% hold off
-% 
-% %% setting up operation
-% 
-% offset = 0.2; %[m] offset from the cargo perimeter
-% 
-% my_robot_army.spreadUnderCargo(round(sim_time / Ts), offset);
-% my_robot_army.attachAll();
-% 
-% if(my_robot_army.checkBalance() == false)
-%     error("out of balance!!!")
-% end
-% % save current positions of the agents as reference for the
-% % formation shape
-% my_robot_army.fixFormation();
-% 
-% %% ending position after spreading under the cargo
-% figure()
-% grid on
-% hold on
-% axis equal
-% show(map)
-% my_robot_army.plot()
-% my_robot_army.plotVoronoiTessellation();
-% my_robot_army.plotCentroids();
-% hold off
-% 
-% %% movement towards a set position
-% cmds = [0.3,0;  0.1,0; 0.1,0;  0.1,0]; 
-% 
-% path = my_robot_army.setTrajectory(cmds);
-% spread_factor = 0.1;
-% % initial status
-% my_robot_army.meetNeighbours(); 
-% my_robot_army.computeVoronoiTessellation();
-% my_robot_army.applyIdealPointDensity(spread_factor);
-% my_robot_army.computeVoronoiCentroids();
-%     
-% figure()
-% grid on
-% hold on
-% axis equal
-% show(map)
-% my_robot_army.plotAgentsPath(path(1:2,:));
-% my_robot_army.plot()
-% my_robot_army.plotCentroids();
-% my_robot_army.plotVoronoiTessellation();
-% hold off
+figure()
+grid on
+hold on
+axis equal
+show(map)
+my_robot_army.plot();
+hold off
 
-% my_robot_army.setWayPoints(path(end,:));
-% for i = 1:20
-%     my_robot_army.meetNeighbours(); 
-%     my_robot_army.computeVoronoiTessellation();
-%     my_robot_army.applyIdealPointDensity();
-%     my_robot_army.computeVoronoiCentroids();
-%     my_robot_army.moveToCentroids(2);
-% end
-% 
-% figure()
-% grid on
-% hold on
-% axis equal
-% show(map)
-% my_robot_army.plot()
-% my_robot_army.plotCentroids();
-% my_robot_army.plotVoronoiTessellation();
-% hold off
+%% setting up operation (spread under cargo)
 
+offset = 0.2; %[m] offset from the cargo perimeter
+
+my_robot_army.spreadUnderCargo(round(sim_time / Ts), offset);
+my_robot_army.attachAll();
+
+if(my_robot_army.checkBalance() == false)
+    error("out of balance!!!")
+end
+% save current positions of the agents as reference for the
+% formation shape
+my_robot_army.fixFormation();
+
+%% ending position after spreading under the cargo
+figure()
+grid on
+hold on
+axis equal
+show(map)
+my_robot_army.plot()
+my_robot_army.plotVoronoiTessellation();
+my_robot_army.plotCentroids();
+hold off
+
+%% New density
+% set way_point
+u = [5,0];
+dest = my_robot_army.setTrajectory(u);
+my_robot_army.setWayPoints(dest);
+
+% compute Voronoi 
+my_robot_army.computeVoronoiTessellation();
+my_robot_army.applyIdealPointDensity(0.5);
+my_robot_army.applyWayPointDensity(0.5);
+my_robot_army.computeVoronoiCentroids();
+
+figure()
+grid on
+hold on
+axis equal
+show(map)
+my_robot_army.plot();
+my_robot_army.plotVoronoiTessellationDetailed(1);
+my_robot_army.plotCentroids();
+hold off
 %% TESTING SECTION
 % comment if not needed
-fprintf('TESTING SECTION\n');
-Testing_unit = tester(map, param, Ts, 1e-2);
-Testing_unit.runAll();
+% fprintf('TESTING SECTION\n');
+% % for simulation need a high resolution
+% param.N_phi = 300;
+% param.N_rho = 300;
+% Testing_unit = tester(map, param, Ts, 1e-2);
+% Testing_unit.runAll();

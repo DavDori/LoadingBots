@@ -204,7 +204,7 @@ classdef agent < handle
         end
         
         
-        function applyVoronoiWayPointDensity(obj)
+        function applyVoronoiWayPointDensity(obj, sf)
             % apply the density function of an exponential centerd in the
             % way point
             applyVoronoiPointDensity(obj, obj.way_point, sf);
@@ -216,7 +216,7 @@ classdef agent < handle
             % ideal position
             % the ideal_position is defined in the cargo refernce frame but
             % it has to be changed in the global ref frame
-            point = obj.ideal_position(1:2) + obj.cargo.center;
+            point = rotationMatrix(obj.cargo.orientation)' * obj.ideal_position(1:2) + obj.cargo.center;
             applyVoronoiPointDensity(obj, point, sf);
         end
         
