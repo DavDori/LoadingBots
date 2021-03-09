@@ -67,6 +67,20 @@ classdef flock < handle
         end
         
         
+        function sendScan(obj)
+            % every agent send a message to its neighbours containing name
+            % and its absolute coordinates
+            for i = 1:obj.n_agents
+                scan = obj.agents(i).scan();
+                for j = 1:obj.n_agents
+                    if(i ~= j)
+                        obj.agents(i).sendScan(obj.agents(j), scan);
+                    end
+                end
+            end
+        end
+        
+        
         function meetNeighbours(obj)
             % send message to each agent and decode it so that every agent
             % will know its neighbours position.

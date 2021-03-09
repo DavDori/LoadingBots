@@ -17,6 +17,7 @@ classdef agent < handle
         
         msg_in % recived message
         Neighbours % positions and names of in range agents
+        Neighbours_scan
         Voronoi_cell Voronoi
         
         ideal_position (2,1) double {mustBeNumeric} % ideal position relative to the cargo reference frame
@@ -40,18 +41,51 @@ classdef agent < handle
               
         % METHODS: communication
         
-        function clearComms(obj)  % clear the comm buffer
+        function clearComms(obj)  
+            % clear the comm buffer
             obj.msg_in = [];
+        end
+        
+        
+        function flag = isNeighbourInRange(obj, other, range)
+            % check if the other agent is within a range
+            q = obj.position - other.position;
+            dist = sqrt(q' * q);
+            flag = range > dist;
         end
         
         
         function sendMessage(obj, other, text) 
             % send a message to the other agent if it's within comm distance
-            q = obj.position - other.position;
-            dist = sqrt(q' * q);
-            if(obj.comm_range > dist)
+            flag = obj.isNeighbourInRange(other, obj.comm_range);
+            if(flag == true)
                 other.msg_in = strcat(other.msg_in, text);
             end
+        end
+        
+        
+        function sendScan(obj, other, scan)
+            % to ease the computation, the scanned area of an agent is sent
+            % directily into a other agent buffer.
+            global index_s;
+            flag = obj.isNeighbourInRange(other, obj.comm_range);
+            if(flag == true)
+                if(isempty(other.Neighbours_scan) == true)
+                    other.Neighbours_scan(1).scan = scan;
+                    index_s = 1;
+                else
+                    index_s = index_s + 1;
+                    other.Neighbours_scan(index_s) = scan;
+                end
+            end
+        end
+        
+        
+        function clearScan(obj)
+            % always to use after usage of sendScan so that the index gets reset    
+            global index_s;    
+            index_s = 1;
+            obj.Neighbours_scan = [];
         end
         
         
@@ -71,6 +105,8 @@ classdef agent < handle
         
         
         function clearNeighbours(obj)
+            global index;
+            index = 1;
             obj.Neighbours = []; 
         end
         
@@ -141,7 +177,6 @@ classdef agent < handle
         end
         
         % METHODS: voronoi cell
-              
         
         function s = scan(obj)
             % simulate a scan of the nearby area using a lidar sensor
@@ -175,6 +210,31 @@ classdef agent < handle
             obj.Voronoi_cell.computeCell(agent_scan ,Neighbours_local_position, obj.dimension);
         end
                  
+        
+        function applyVoronoiCargoLimits(obj, offset)
+            obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset);
+        end
+        
+        
+        function applyConnectivityMaintenance(obj)
+            % check that every point of the Voronoi tessellation is in the
+            % visibility set of the neighbours
+            for i = 1:obj.Voronoi_cell.rho_n
+                for j = 1:obj.Voronoi_cell.phi_n
+                    % consider the scan of one agent at the time
+                    for scan = obj.Neighbours_scan
+                        % check by approximation if the point is inside the
+                        % visibility set given by the scan.
+                        % Have to compute the relative position of each
+                        % neighbour (assumed that the order for the comm of
+                        % positions and scans are the same)
+                        
+                    end
+                end
+            end
+        end
+        
+        % Density methods
         
         function applyVoronoiFarFromCargoDensity(obj)
             % should give an equivalent result to computeVoronoiCellCentroidAwayCenterMass
@@ -219,12 +279,7 @@ classdef agent < handle
             point = rotationMatrix(obj.cargo.orientation)' * obj.ideal_position(1:2) + obj.cargo.center;
             applyVoronoiPointDensity(obj, point, sf);
         end
-        
-        
-        function applyVoronoiCargoLimits(obj, offset)
-            obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset);
-        end
-        
+
                 
         % METHODS: path planning
         
@@ -293,6 +348,9 @@ classdef agent < handle
         end
         function set.Neighbours(obj, info)
             obj.Neighbours = info;
+        end
+        function set.Neighbours_scan(obj, scan)
+            obj.Neighbours_scan = scan;
         end
         function set.Voronoi_cell(obj, v_cell)
             obj.Voronoi_cell = v_cell;

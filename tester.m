@@ -198,14 +198,75 @@ classdef tester
         end
         
         
-        function runAll(obj)
+        function flag = doubleDensityOnCell(obj, view)
+            center = [2 ; 2]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+
+            agents(1) = agent('001', cargo.center, obj.param, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts);
+            sf = 0.5;
+            % first test
+            point1 = center + obj.param.range / 2;
+            point2 = center - obj.param.range / 2;
+            
+            robot_flock.computeVoronoiTessellation();
+            robot_flock.applySinglePointDensity(point1, sf);
+            robot_flock.applySinglePointDensity(point2, sf);
+            robot_flock.computeVoronoiCentroids();
+            % centroid expected on the robot location
+            error_x = robot_flock.agents.Voronoi_cell.centroid(1);
+            error_y = robot_flock.agents.Voronoi_cell.centroid(2);
+            flag = abs(error_x) < obj.max_error && abs(error_y) < obj.max_error;
+            
+            if(view == true)
+                figure()
+                grid on
+                hold on
+                axis equal
+                show(obj.map)
+                robot_flock.plot();
+                robot_flock.plotVoronoiTessellationDetailed(10);
+            end
+        end
+        
+        
+        function flag = scanComm(obj)
+            center = [2 ; 2]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+            pos = cargo.center;
+            agents(1) = agent('001', pos , obj.param, cargo, obj.map);
+            pos = pos - [0; obj.param.range / 2]; % in range of 1
+            agents(2) = agent('002', pos, obj.param, cargo, obj.map);
+            pos = pos + [0; obj.param.comm_range * 2]; % out of range of both 1,2
+            agents(3) = agent('003', pos, obj.param, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts);
+            
+            robot_flock.meetNeighbours(); 
+            robot_flock.sendScan();
+            flag1 = isempty(robot_flock.agents(3).Neighbours_scan) == true;
+            flag2 = isempty(robot_flock.agents(2).Neighbours_scan) == false;
+            flag3 = isempty(robot_flock.agents(1).Neighbours_scan) == false;
+            
+            flag = flag1 && flag2 && flag3;
+        end
+        
+        
+        function runAll(obj, view)
             e = obj.centroidOmogeneus();
             if(e == false)
                 fprintf('centroid test: \t failed\n');
             else
                 fprintf('centroid test: \t successeful\n');
             end
-            e = obj.collisionDetection(false);
+            e = obj.collisionDetection(view);
             if(e == false)
                 fprintf('collision test: \t failed\n');
             else
@@ -234,6 +295,18 @@ classdef tester
                 fprintf('point density second test: \t failed\n');
             else
                 fprintf('point density second test: \t successeful\n');
+            end
+            e = obj.doubleDensityOnCell(view);
+            if(e == false)
+                fprintf('double point density test: \t failed\n');
+            else
+                fprintf('double point density test: \t successeful\n');
+            end
+            e = obj.scanComm();
+            if(e == false)
+                fprintf('communication of scan area test: \t failed\n');
+            else
+                fprintf('communication of scan area test: \t successeful\n');
             end
         end
     end
