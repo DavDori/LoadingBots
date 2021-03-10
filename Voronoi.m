@@ -59,6 +59,36 @@ classdef Voronoi < handle
         end
         
         
+        function applyConnectivityMaintenance(obj, pos, range_max, Neighbours, Neighbours_scans)
+            % takes the visibility set that has to be already computed and
+            % intersects it with the visibility set of the neighbours
+            % NOTE: lidar range assumed to be the same for each agent
+            tmp_cell = obj.cell;
+            % for every point 
+            for i = 1:obj.rho_n % for every angle
+                for j = 1:obj.phi_n % for some radius
+                    if(obj.cell(i,j) == 1)
+                        % compute the point in the absolute ref. frame
+                        rho = i * obj.rho_res;
+                        phi = j * obj.phi_res;
+                        [x, y] = polar2cartesian(rho, phi);
+                        point = [x; y] + pos;
+                        for k = 1:length(Neighbours_scans) % for every scan
+                            q = point - Neighbours(k).position';
+                            dist = sqrt(q'*q); % distance between point and neighbour
+                            if(dist > range_max)
+                                tmp_cell(i,j) = 0;
+                                break;
+                            end
+                        end
+                        
+                    end
+                end
+            end
+            obj.cell = tmp_cell;
+        end
+        
+        
         function tmp_cell = applyCargoLimits(obj, agent_position, cargo, offset)
             % for every point in the cell check if it's in the cargo domain
             % the cell value is kept, otherwise it's set to 0
@@ -149,7 +179,7 @@ classdef Voronoi < handle
         function initCells(obj)
             % initialize the voronoi cell with zeros
             obj.cell = zeros(obj.rho_n, obj.phi_n);
-            obj.cell_density = obj.cell;
+            obj.cell_density = zeros(obj.rho_n, obj.phi_n);
         end
         
         
@@ -157,15 +187,19 @@ classdef Voronoi < handle
             % plot a detaild version of the voronoi cell considering a
             % density function applied on it
             hold on
+            max_value =  max(obj.cell_density, [], 'all');
+            if(max_value == 0)
+                max_value = 1;
+            end
             for i = 1:step:obj.rho_n % rho
                 for j = 1:step:obj.phi_n % phi
                     % represent every point of cell
-                    if(obj.cell(i,j) > 0)
+                    if(obj.cell(i,j) == 1)
                         [x_local,y_local] = polar2cartesian(i * obj.rho_res, j * obj.phi_res);
                         local_p = [x_local, y_local]';
                         global_p = local2global(position, local_p);
                         
-                        normalizer = obj.cell_density(i,j) / max(obj.cell_density, [], 'all');
+                        normalizer = obj.cell_density(i,j) / max_value;
                         color = [1,1,1] - [1,1,1] * normalizer;
                         plot(global_p(1),global_p(2), '.', 'Color', color);
                     end

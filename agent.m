@@ -7,6 +7,7 @@ classdef agent < handle
         position (2,1) double {mustBeNumeric}   % absolute coordinates
         dimension (1,1) double {mustBeNumeric}  % agent as a circle 
         attached (1,1) logical % is the agent attached to the load? 
+        index_s;
         
         cargo rect_load % object representing the load the agents have to move around
         map binaryOccupancyMap % map where the agent is working (needed for simulations)
@@ -37,6 +38,7 @@ classdef agent < handle
             obj.msg_in = [];
             obj.Neighbours = [];
             obj.Voronoi_cell = Voronoi(param.N_rho, param.N_phi, param.range);
+            obj.index_s = 1;
         end
               
         % METHODS: communication
@@ -67,24 +69,22 @@ classdef agent < handle
         function sendScan(obj, other, scan)
             % to ease the computation, the scanned area of an agent is sent
             % directily into a other agent buffer.
-            global index_s;
             flag = obj.isNeighbourInRange(other, obj.comm_range);
             if(flag == true)
                 if(isempty(other.Neighbours_scan) == true)
                     other.Neighbours_scan(1).scan = scan;
-                    index_s = 1;
+                    obj.index_s = 1;
                 else
-                    index_s = index_s + 1;
-                    other.Neighbours_scan(index_s) = scan;
+                    obj.index_s = obj.index_s + 1;
+                    other.Neighbours_scan(obj.index_s).scan = scan;
                 end
             end
         end
         
         
         function clearScan(obj)
-            % always to use after usage of sendScan so that the index gets reset    
-            global index_s;    
-            index_s = 1;
+            % always to use after usage of sendScan so that the index gets reset       
+            obj.index_s = 1;
             obj.Neighbours_scan = [];
         end
         
@@ -323,6 +323,11 @@ classdef agent < handle
             end
             circle(obj.position(1), obj.position(2), obj.dimension);
             hold off
+        end
+        
+        
+        function plotVoronoiCellDetailed(obj, step)
+            obj.Voronoi_cell.plot(obj.position, step); 
         end
         
         

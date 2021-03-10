@@ -265,7 +265,7 @@ classdef flock < handle
             % of the cell
             hold on
             for a = obj.agents
-                a.Voronoi_cell.plot(a.position, step); 
+                a.plotVoronoiCellDetailed(step); 
             end
             hold off
         end
