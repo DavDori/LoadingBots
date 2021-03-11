@@ -82,13 +82,6 @@ classdef agent < handle
         end
         
         
-        function clearScan(obj)
-            % always to use after usage of sendScan so that the index gets reset       
-            obj.index_s = 1;
-            obj.Neighbours_scan = [];
-        end
-        
-        
         function decodeTextIn(obj)
             % takes the message that the agent recived and tries to decode
             % it
@@ -217,21 +210,14 @@ classdef agent < handle
         
         
         function applyConnectivityMaintenance(obj)
-            % check that every point of the Voronoi tessellation is in the
-            % visibility set of the neighbours
-            for i = 1:obj.Voronoi_cell.rho_n
-                for j = 1:obj.Voronoi_cell.phi_n
-                    % consider the scan of one agent at the time
-                    for scan = obj.Neighbours_scan
-                        % check by approximation if the point is inside the
-                        % visibility set given by the scan.
-                        % Have to compute the relative position of each
-                        % neighbour (assumed that the order for the comm of
-                        % positions and scans are the same)
-                        
-                    end
-                end
-            end
+            obj.Voronoi_cell.unionVisibilitySets(obj.position,...
+                obj.lidar_range, obj.Neighbours, obj.Neighbours_scan);
+        end
+        
+        function clearScan(obj)
+            % always to use after usage of sendScan so that the index gets reset       
+            obj.index_s = 1;
+            obj.Neighbours_scan = [];
         end
         
         % Density methods

@@ -113,6 +113,15 @@ classdef flock < handle
         end
         
         
+        function connectivityMaintenance(obj)
+            % modify the voronoi cells of every agent to allow connectivity
+            % maintenance
+            for a = obj.agents
+                a.applyConnectivityMaintenance();
+            end
+        end
+        
+        
         function centroids = computeVoronoiCentroids(obj)
             % compute the centroid of every agent voronoi cell
             centroids = zeros(obj.n_agents, 2);

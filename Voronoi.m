@@ -59,7 +59,7 @@ classdef Voronoi < handle
         end
         
         
-        function applyConnectivityMaintenance(obj, pos, range_max, Neighbours, Neighbours_scans)
+        function unionVisibilitySets(obj, pos, range_max, Neighbours, Neighbours_scans)
             % takes the visibility set that has to be already computed and
             % intersects it with the visibility set of the neighbours
             % NOTE: lidar range assumed to be the same for each agent
@@ -74,11 +74,24 @@ classdef Voronoi < handle
                         [x, y] = polar2cartesian(rho, phi);
                         point = [x; y] + pos;
                         for k = 1:length(Neighbours_scans) % for every scan
+                            % transfers the coordinates to the
+                            % reference frame of the Neighbour
                             q = point - Neighbours(k).position';
                             dist = sqrt(q'*q); % distance between point and neighbour
                             if(dist > range_max)
                                 tmp_cell(i,j) = 0;
                                 break;
+                            else
+                                % assumption: every neighbour discretize
+                                % the area in the same way.
+                                % angle has to in 0 and 2pi
+                                angle = change_piTo2pi(atan2(q(2),q(1)));
+                                % find the curesponding index
+                                angle_index = ceil(angle / obj.phi_res);
+                                if(Neighbours_scans(k).scan(angle_index, 2) < dist)
+                                    tmp_cell(i,j) = 0;
+                                    break
+                                end
                             end
                         end
                         

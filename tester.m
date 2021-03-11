@@ -260,24 +260,26 @@ classdef tester
         
         
         function flag = connectivityMaintenance(obj)
-             flag = true;
-             center = [2 ; 2]; % [m]
+            map_cm = png2BOMap('map_test_2.png', 22); % specific map to check connectivity maintenance
+            flag = true;
+            center = [map_cm.XWorldLimits(2) / 2 ; map_cm.YWorldLimits(2) / 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
+            
             cargo = rect_load(center, center_mass, orientation, dimensions);
-            pos = cargo.center;
-            agents(1) = agent('001', pos , obj.param, cargo, obj.map);
-            pos = pos - [0; obj.param.range]; % in range of 1
-            agents(2) = agent('002', pos, obj.param, cargo, obj.map);
+            pos = center + [0; 0.7];
+            agents(1) = agent('001', pos , obj.param, cargo, map_cm);
+            pos = center - [0; 0.2]; % in range of 1
+            agents(2) = agent('002', pos, obj.param, cargo, map_cm);
 
             robot_flock = flock(agents, cargo, obj.Ts);
             robot_flock.meetNeighbours(); % meat neighbours
             robot_flock.sendScan(); % send scan
             robot_flock.computeVoronoiTessellation(); % compute cell
-            agents(1).Voronoi_cell.applyConnectivityMaintenance(agents(1).position,...
-                agents(1).lidar_range, agents(1).Neighbours, agents(1).Neighbours_scan);
-            robot_flock.applyConstantDensity();
+            robot_flock.connectivityMaintenance();
+            robot_flock.applyConstantDensity(); 
+            
             figure()
             hold on
             robot_flock.plotVoronoiTessellationDetailed(1)
