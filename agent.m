@@ -38,7 +38,6 @@ classdef agent < handle
             obj.msg_in = [];
             obj.Neighbours = [];
             obj.Voronoi_cell = Voronoi(param.N_rho, param.N_phi, param.range);
-            obj.index_s = 1;
         end
               
         % METHODS: communication
@@ -70,13 +69,14 @@ classdef agent < handle
             % to ease the computation, the scanned area of an agent is sent
             % directily into a other agent buffer.
             flag = obj.isNeighbourInRange(other, obj.comm_range);
+            
             if(flag == true)
                 if(isempty(other.Neighbours_scan) == true)
                     other.Neighbours_scan(1).scan = scan;
-                    obj.index_s = 1;
+                    other.index_s = 1;
                 else
-                    obj.index_s = obj.index_s + 1;
-                    other.Neighbours_scan(obj.index_s).scan = scan;
+                    other.index_s = other.index_s + 1;
+                    other.Neighbours_scan(other.index_s).scan = scan;
                 end
             end
         end

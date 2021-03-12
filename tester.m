@@ -259,20 +259,24 @@ classdef tester
         end
         
         
-        function flag = connectivityMaintenance(obj)
-            map_cm = png2BOMap('map_test_2.png', 22); % specific map to check connectivity maintenance
+        function flag = connectivityMaintenance(obj, view)
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
             flag = true;
             center = [map_cm.XWorldLimits(2) / 2 ; map_cm.YWorldLimits(2) / 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
+            test_param = obj.param;
+            test_param.range = 1;
             
             cargo = rect_load(center, center_mass, orientation, dimensions);
-            pos = center + [0; 0.7];
-            agents(1) = agent('001', pos , obj.param, cargo, map_cm);
-            pos = center - [0; 0.2]; % in range of 1
-            agents(2) = agent('002', pos, obj.param, cargo, map_cm);
-
+            pos = center + [0; 0.6];
+            agents(1) = agent('001', pos, test_param, cargo, map_cm);
+            pos = center - [-0.5; 0.2]; % in range of 1
+            agents(2) = agent('002', pos, test_param, cargo, map_cm);
+            pos = center - [0.5; 0.2]; % in range of 1
+            agents(3) = agent('003', pos, test_param, cargo, map_cm);
+            
             robot_flock = flock(agents, cargo, obj.Ts);
             robot_flock.meetNeighbours(); % meat neighbours
             robot_flock.sendScan(); % send scan
@@ -280,10 +284,13 @@ classdef tester
             robot_flock.connectivityMaintenance();
             robot_flock.applyConstantDensity(); 
             
-            figure()
-            hold on
-            robot_flock.plotVoronoiTessellationDetailed(1)
-            robot_flock.plot();
+            
+            if(view == true)
+                figure()
+                hold on
+                robot_flock.plotVoronoiTessellationDetailed(1)
+                robot_flock.plot();
+            end
         end
         
         
