@@ -113,6 +113,14 @@ classdef flock < handle
         end
         
         
+        function computeVisibilitySets(obj)
+            % compute the visibility set for every agent
+            for a = obj.agents
+                a.computeVisibilitySet(); 
+            end
+        end
+        
+        
         function connectivityMaintenance(obj)
             % modify the voronoi cells of every agent to allow connectivity
             % maintenance

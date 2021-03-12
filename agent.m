@@ -196,20 +196,30 @@ classdef agent < handle
         end
         
         
-        function computeVoronoiCell(obj)
-            % compute the Voronoi Cell of the agent
+        function computeVisibilitySet(obj)
+            % compute the visibility set of the agent. Has to be computed
+            % before the Voronoi cell calculation
             agent_scan = scan(obj);
-            Neighbours_local_position = getNeighboursLocalPosition(obj);
-            obj.Voronoi_cell.computeCell(agent_scan ,Neighbours_local_position, obj.dimension);
+            obj.Voronoi_cell.visibilitySet(agent_scan);
         end
-                 
+        
+        
+        function computeVoronoiCell(obj)
+            % compute the Voronoi Cell of the agent. Has to be computed
+            % after the visibility set calculation.
+            Neighbours_local_position = getNeighboursLocalPosition(obj);
+            obj.Voronoi_cell.computeCell(Neighbours_local_position, obj.dimension);
+        end
+        
         
         function applyVoronoiCargoLimits(obj, offset)
+            % apply cargo limits on the cell tessellation
             obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset);
         end
         
         
         function applyConnectivityMaintenance(obj)
+            % compute the union between the neighbours visibility sets
             obj.Voronoi_cell.unionVisibilitySets(obj.position,...
                 obj.lidar_range, obj.Neighbours, obj.Neighbours_scan);
         end
@@ -308,6 +318,7 @@ classdef agent < handle
                 plot(obj.position(1), obj.position(2), 'or')
             end
             circle(obj.position(1), obj.position(2), obj.dimension);
+            circle(obj.position(1), obj.position(2), obj.lidar_range);
             hold off
         end
         

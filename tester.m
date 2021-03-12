@@ -31,6 +31,7 @@ classdef tester
             agents(1) = agent('001', [2; 2.5], obj.param, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts);
             
+            robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
             c = robot_flock.computeVoronoiCentroids();
             e = abs(c' - robot_flock.agents.position());
@@ -62,6 +63,7 @@ classdef tester
             % first test
             point = center + obj.param.range / 2;
             
+            robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point, sf);
             cell = robot_flock.agents(1).Voronoi_cell.cell_density;
@@ -141,7 +143,9 @@ classdef tester
             agents(2) = agent('002', [2 - dist; 0], obj.param, cargo, obj.map);
             
             robot_flock = flock(agents, cargo, obj.Ts);
+            
             robot_flock.meetNeighbours();
+            robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applyConstantDensity();
             c = robot_flock.computeVoronoiCentroids();
@@ -185,10 +189,13 @@ classdef tester
             % set the agent at 1 vertex
             agents(1) = agent('001', vertex(1,:), obj.param, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts);
+            
             robot_flock.meetNeighbours();
+            robot_flock.computeVisibilitySets();
+            
             robot_flock.computeVoronoiTessellationCargo(offset);
             % get the points in the cell that are set to 1
-            p = sum(robot_flock.agents.Voronoi_cell.cell, 'all');
+            p = sum(robot_flock.agents.Voronoi_cell.cell_tessellaion, 'all');
             % get the total amount of points
             p_tot = robot_flock.agents.Voronoi_cell.rho_n * robot_flock.agents.Voronoi_cell.phi_n;
             
@@ -213,6 +220,7 @@ classdef tester
             point1 = center + obj.param.range / 2;
             point2 = center - obj.param.range / 2;
             
+            robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point1, sf);
             robot_flock.applySinglePointDensity(point2, sf);
@@ -268,6 +276,8 @@ classdef tester
             orientation = pi/2;         % [rad]
             test_param = obj.param;
             test_param.range = 1;
+            test_param.N_phi = 16;
+            test_param.N_rho = 20;
             
             cargo = rect_load(center, center_mass, orientation, dimensions);
             pos = center + [0; 0.6];
@@ -280,10 +290,11 @@ classdef tester
             robot_flock = flock(agents, cargo, obj.Ts);
             robot_flock.meetNeighbours(); % meat neighbours
             robot_flock.sendScan(); % send scan
-            robot_flock.computeVoronoiTessellation(); % compute cell
+            robot_flock.computeVisibilitySets();
             robot_flock.connectivityMaintenance();
-            robot_flock.applyConstantDensity(); 
-            
+            robot_flock.computeVoronoiTessellation();
+            robot_flock.applyConstantDensity();
+                       
             
             if(view == true)
                 figure()

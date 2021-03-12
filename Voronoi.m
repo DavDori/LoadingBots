@@ -3,8 +3,10 @@ classdef Voronoi < handle
     %   Detailed explanation goes here
     
     properties
-        cell {mustBeNumeric} % binary vision of the cell
+        visibility_set {mustBeNumeric} % points seen 
         cell_density {mustBeNumeric} % density of each element of the cell
+        cell_tessellaion {mustBeNumeric} % binary vision of the cell
+        
         centroid {mustBeNumeric}
         rho_res {mustBeNumeric}
         phi_res {mustBeNumeric}
@@ -20,7 +22,6 @@ classdef Voronoi < handle
             obj.rho_n = rho_n;
             obj.phi_n = phi_n;
             [obj.rho_res, obj.phi_res] = getCellResolution(obj, max_range);
-            obj.initCells();
         end
         
         
@@ -31,22 +32,22 @@ classdef Voronoi < handle
         end
         
         
-        function computeCell(obj, agent_scan, Neighbours, agent_size)
+        function computeCell(obj, Neighbours, agent_size)
             % discretize a circular space around the agent. Set to 1 the
             % point closer to the agent and to 0 those closer to the
             % neighbour agents.
             % NOTE: neighbours have to be defined in the local refernce
             % frame relative to the current agent.
             % define resolution of the angle and radius.
-            % offset is defined so that the agent doesn't exeed the perimeter
-            % defined by the cargo. An empty offset value will ignore this
-            % operation
+            % NOTE: first a visibility set has to be computed
+            if(isempty(obj.visibility_set))
+                error('Visibility set has to be computed before this operation');
+            end
             initCells(obj);
-            tmp_cell = obj.cell;
+            tmp_cell = obj.visibility_set;
             % for every point in the cell check if it's closer to agent
             for i = 1:obj.phi_n % for every angle
-                distance_index = ceil(agent_scan(i,1) / obj.rho_res);
-                for j = 1:distance_index % for some radius
+                for j = 1:sum(obj.visibility_set(:,i)) % for some radius in the visibility set
                     rho = j * obj.rho_res;
                     phi = i * obj.phi_res;
                     [x, y] = polar2cartesian(rho, phi);
@@ -55,19 +56,34 @@ classdef Voronoi < handle
                     tmp_cell(j,i) = isCloser(Neighbours, point, agent_size);
                 end
             end
-            obj.cell = tmp_cell;
+            obj.cell_tessellaion = tmp_cell;
         end
         
+        
+        function visibilitySet(obj, agent_scan)
+            % discretize a circular space around the agent and define the
+            % visibility set of the agent
+            initVisibilitySet(obj);
+            tmp_cell = obj.visibility_set;
+            % for every point in the cell check if it's closer to agent
+            for i = 1:obj.phi_n % for every angle
+                distance_index = ceil(agent_scan(i,1) / obj.rho_res);
+                for j = 1:distance_index % for some radius                   
+                    tmp_cell(j,i) = 1;
+                end
+            end
+            obj.visibility_set = tmp_cell;
+        end
         
         function unionVisibilitySets(obj, pos, range_max, Neighbours, Neighbours_scans)
             % takes the visibility set that has to be already computed and
             % intersects it with the visibility set of the neighbours
             % NOTE: lidar range assumed to be the same for each agent
-            tmp_cell = obj.cell;
+            tmp_cell = obj.visibility_set;
             % for every point 
             for i = 1:obj.rho_n % for every angle
                 for j = 1:obj.phi_n % for some radius
-                    if(obj.cell(i,j) == 1)
+                    if(obj.visibility_set(i,j) == 1)
                         % compute the point in the absolute ref. frame
                         rho = i * obj.rho_res;
                         phi = j * obj.phi_res;
@@ -98,17 +114,17 @@ classdef Voronoi < handle
                     end
                 end
             end
-            obj.cell = tmp_cell;
+            obj.visibility_set = tmp_cell;
         end
         
         
         function tmp_cell = applyCargoLimits(obj, agent_position, cargo, offset)
             % for every point in the cell check if it's in the cargo domain
             % the cell value is kept, otherwise it's set to 0
-            tmp_cell = obj.cell;
+            tmp_cell = obj.cell_tessellaion;
             
             for i = 1:obj.phi_n % for every angle
-                for j = 1:obj.rho_n % for every radius
+                for j = 1:obj.rho_n % for every radius in the visibility set
                     rho = j * obj.rho_res;
                     phi = i * obj.phi_res;
                     [x, y] = polar2cartesian(rho, phi);
@@ -119,21 +135,21 @@ classdef Voronoi < handle
                     end
                 end
             end
-            obj.cell = tmp_cell;
+            obj.cell_tessellaion = tmp_cell;
         end
         
         
         function tmp_cell = applyDensity(obj, fun_d)
             % apply the desnsity function on every point of the Voronoi
             % cell and return the resulting cell 
-            tmp_cell = obj.cell;
+            tmp_cell = obj.cell_tessellaion;
             
             % for every point in the cell check if it's closer to agent
             for i = 1:obj.phi_n % for every angle
                 for j = 1:obj.rho_n % for some radius
                     rho = j * obj.rho_res;
                     phi = i * obj.phi_res;
-                    tmp_cell(j,i) = fun_d(rho, phi) * obj.cell(j,i);
+                    tmp_cell(j,i) = fun_d(rho, phi) * obj.cell_tessellaion(j,i);
                 end
             end
             % calculate the normalizer for the applied density
@@ -150,7 +166,7 @@ classdef Voronoi < handle
             if(nargin == 1)
                 c = 1;  %default value
             end
-            cell_tmp = obj.cell * c;
+            cell_tmp = obj.cell_tessellaion * c;
             obj.cell_density = obj.cell_density + cell_tmp;
         end
         
@@ -191,8 +207,13 @@ classdef Voronoi < handle
         
         function initCells(obj)
             % initialize the voronoi cell with zeros
-            obj.cell = zeros(obj.rho_n, obj.phi_n);
+            obj.cell_tessellaion = zeros(obj.rho_n, obj.phi_n);
             obj.cell_density = zeros(obj.rho_n, obj.phi_n);
+        end
+        
+        
+        function initVisibilitySet(obj)
+            obj.visibility_set = zeros(obj.rho_n, obj.phi_n);
         end
         
         
@@ -207,7 +228,7 @@ classdef Voronoi < handle
             for i = 1:step:obj.rho_n % rho
                 for j = 1:step:obj.phi_n % phi
                     % represent every point of cell
-                    if(obj.cell(i,j) == 1)
+                    if(obj.cell_tessellaion(i,j) == 1)
                         [x_local,y_local] = polar2cartesian(i * obj.rho_res, j * obj.phi_res);
                         local_p = [x_local, y_local]';
                         global_p = local2global(position, local_p);
@@ -228,7 +249,7 @@ classdef Voronoi < handle
             
             for i = 1:obj.phi_n % for every angle
                 [x_local,y_local] = polar2cartesian(...
-                    sum(obj.cell(:,i) ~= 0) * obj.rho_res, i * obj.phi_res);
+                    sum(obj.cell_tessellaion(:,i) ~= 0) * obj.rho_res, i * obj.phi_res);
                 local_p = [x_local, y_local]';
                 edges(i,:) = local2global(position, local_p);
             end
@@ -236,8 +257,8 @@ classdef Voronoi < handle
         end
         
         % SETTERS methods
-        function set.cell(obj, v_cell)
-            obj.cell = v_cell;
+        function set.visibility_set(obj, v_cell)
+            obj.visibility_set = v_cell;
         end
         function set.cell_density(obj, v_cell)
             obj.cell_density = v_cell;
@@ -245,7 +266,9 @@ classdef Voronoi < handle
         function set.centroid(obj, c)
             obj.centroid = c;
         end
-        
+        function set.cell_tessellaion(obj, tes)
+            obj.cell_tessellaion = tes;
+        end
     end
 end
 
