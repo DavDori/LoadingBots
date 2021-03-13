@@ -104,7 +104,8 @@ classdef Voronoi < handle
                                 angle = change_piTo2pi(atan2(q(2),q(1)));
                                 % find the curesponding index
                                 angle_index = ceil(angle / obj.phi_res);
-                                if(Neighbours_scans(k).scan(angle_index, 2) < dist)
+                                measured_rho = Neighbours_scans(k).scan(angle_index, 1);
+                                if(measured_rho < dist) % point is outside the visibility set of the neighbour
                                     tmp_cell(i,j) = 0;
                                     break
                                 end
