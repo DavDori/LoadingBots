@@ -183,11 +183,14 @@ classdef tester
             orientation = 0;         % [rad]
             offset = 0;
             
+            default_param = obj.param;
+            default_param.N_phi = 140;
+            default_param.N_rho = 140;
             % cargo has to be a rectangle
             cargo = rect_load(center, center_mass, orientation, dimensions);
             vertex = computeVertexPositions(cargo); 
             % set the agent at 1 vertex
-            agents(1) = agent('001', vertex(1,:), obj.param, cargo, obj.map);
+            agents(1) = agent('001', vertex(1,:), default_param, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts);
             
             robot_flock.meetNeighbours();
@@ -269,15 +272,14 @@ classdef tester
         
         function flag = connectivityMaintenance(obj, view)
             map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
-            flag = true;
             center = [map_cm.XWorldLimits(2) / 2 ; map_cm.YWorldLimits(2) / 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             test_param = obj.param;
             test_param.range = 1;
-            test_param.N_phi = 16;
-            test_param.N_rho = 20;
+            test_param.N_phi = 100;
+            test_param.N_rho = 100;
             
             cargo = rect_load(center, center_mass, orientation, dimensions);
             pos = center + [0; 0.6];
@@ -294,14 +296,20 @@ classdef tester
             robot_flock.connectivityMaintenance();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applyConstantDensity();
-                       
+            robot_flock.computeVoronoiCentroids();
             
             if(view == true)
                 figure()
                 hold on
-                robot_flock.plotVoronoiTessellationDetailed(1)
+                robot_flock.plotVoronoiTessellationDetailed(3)
                 robot_flock.plot();
+                robot_flock.plotCentroids();
             end
+            
+            flag_x = abs(agents(1).Voronoi_cell.centroid(1)) < obj.max_error;
+            flag_y = agents(1).Voronoi_cell.centroid(2) < agents(1).position(2);
+            
+            flag = flag_x && flag_y;
         end
         
         
@@ -353,6 +361,12 @@ classdef tester
                 fprintf('communication of scan area test: \t failed\n');
             else
                 fprintf('communication of scan area test: \t successeful\n');
+            end
+            e = obj.connectivityMaintenance(view);
+            if(e == false)
+                fprintf('connectivity maintenance test: \t failed\n');
+            else
+                fprintf('connectivity maintenance test: \t successeful\n');
             end
         end
     end
