@@ -103,8 +103,8 @@ classdef Voronoi < handle
                                 % angle has to in 0 and 2pi
                                 angle = change_piTo2pi(atan2(q(2),q(1)));
                                 % find the curesponding index
-                                angle_index = ceil(angle / obj.phi_res);
-                                measured_rho = Neighbours_scans(k).scan(angle_index, 1);
+                                index = obj.getAngleIndex(angle);
+                                measured_rho = Neighbours_scans(k).scan(index, 1);
                                 if(measured_rho < dist) % point is outside the visibility set of the neighbour
                                     tmp_cell(i,j) = 0;
                                     break
@@ -117,6 +117,16 @@ classdef Voronoi < handle
             end
             obj.visibility_set = tmp_cell;
         end
+        
+            
+        function index = getAngleIndex(obj, angle)
+            % compute the approximation of the angle and the corresponding
+            % index in order to compare it with the scan / cell 
+            index = round(angle / obj.phi_res);
+            if(index == 0)
+                index = obj.phi_n;
+            end
+        end  
         
         
         function tmp_cell = applyCargoLimits(obj, agent_position, cargo, offset)

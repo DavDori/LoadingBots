@@ -50,23 +50,6 @@ classdef flock < handle
         end
         
         
-        function sendNamePosition(obj)
-            % every agent send a message to its neighbours containing name
-            % and its absolute coordinates
-            for i = 1:obj.n_agents
-                for j = 1:obj.n_agents
-                    if(i ~= j)
-                        % string to send
-                        mex = strcat('N', obj.agents(i).name, ...
-                                     ',X', num2str(obj.agents(i).position(1)),...
-                                     ',Y', num2str(obj.agents(i).position(2)), ';');
-                        obj.agents(i).sendMessage(obj.agents(j), mex);
-                    end
-                end
-            end
-        end
-        
-        
         function sendScan(obj)
             % every agent send a message to its neighbours containing name
             % and its absolute coordinates
@@ -84,14 +67,41 @@ classdef flock < handle
         function meetNeighbours(obj)
             % send message to each agent and decode it so that every agent
             % will know its neighbours position.
+            
+            clearAllCommsData(obj);
             sendNamePosition(obj);
-            for agent = obj.agents
-                agent.clearNeighbours();
-                agent.decodeTextIn();
-                agent.clearComms();
+            for a = obj.agents
+                a.decodeTextIn();
             end
         end
         
+        
+        function sendNamePosition(obj)
+            % every agent send a message to its neighbours containing name
+            % and its absolute coordinates
+            for i = 1:obj.n_agents
+                for j = 1:obj.n_agents
+                    if(i ~= j)
+                        % string to send
+                        mex = strcat('N', obj.agents(i).name, ...
+                                     ',X', num2str(obj.agents(i).position(1)),...
+                                     ',Y', num2str(obj.agents(i).position(2)), ';');
+                        obj.agents(i).sendMessage(obj.agents(j), mex);
+                    end
+                end
+            end
+        end
+        
+        
+        function clearAllCommsData(obj)
+            % to perform every step, clear the communication data such as
+            % neighbours location and scans
+            for a = obj.agents
+                a.clearComms();
+                a.clearScan();
+                a.clearNeighbours();
+            end
+        end
         
         function computeVoronoiTessellationCargo(obj, offset)
             % compute the Voronoi tessellation of a discretization of the
@@ -193,7 +203,6 @@ classdef flock < handle
             for i = 1:obj.n_agents
                 % calculate the destination for each agent
                 dest_i = obj.agents(i).computeWayPoint(dest');
-                fprintf('position of %s = [%f, %f]\n', obj.agents(i).name, dest_i);
             end
         end
         
@@ -252,7 +261,16 @@ classdef flock < handle
                 a.ideal_position = rotationMatrix(a.cargo.orientation) * d_pos;
             end
         end
-                
+              
+        
+        function reached = areWayPointsReached(obj, error)
+            % for every agent if they have reached their waypoint
+            reached = false(obj.n_agents, 1); 
+            for i = 1:obj.n_agents
+                reached(i) = obj.agents(i).isWayPointReached(error);
+            end
+        end
+        
         % METHODS: representation
         
         function plot(obj)

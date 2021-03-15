@@ -186,6 +186,7 @@ classdef tester
             default_param = obj.param;
             default_param.N_phi = 140;
             default_param.N_rho = 140;
+            default_param.range = 1;
             % cargo has to be a rectangle
             cargo = rect_load(center, center_mass, orientation, dimensions);
             vertex = computeVertexPositions(cargo); 
@@ -246,17 +247,25 @@ classdef tester
         
         
         function flag = scanComm(obj)
+            % check if the agents recive the scanned area 
             center = [2 ; 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
+            
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 60;           % division of the radius for discretization
+            param_test.N_phi = 90;           % division of the angle for discretization
+            
             cargo = rect_load(center, center_mass, orientation, dimensions);
             pos = cargo.center;
-            agents(1) = agent('001', pos , obj.param, cargo, obj.map);
-            pos = pos - [0; obj.param.range / 2]; % in range of 1
-            agents(2) = agent('002', pos, obj.param, cargo, obj.map);
-            pos = pos + [0; obj.param.comm_range * 2]; % out of range of both 1,2
-            agents(3) = agent('003', pos, obj.param, cargo, obj.map);
+            agents(1) = agent('001', pos , param_test, cargo, obj.map);
+            pos = pos - [0; param_test.range / 2]; % in range of 1
+            agents(2) = agent('002', pos, param_test, cargo, obj.map);
+            pos = pos + [0; param_test.comm_range * 2]; % out of range of both 1,2
+            agents(3) = agent('003', pos, param_test, cargo, obj.map);
             
             robot_flock = flock(agents, cargo, obj.Ts);
             
@@ -278,8 +287,8 @@ classdef tester
             orientation = pi/2;         % [rad]
             test_param = obj.param;
             test_param.range = 1;
-            test_param.N_phi = 100;
-            test_param.N_rho = 100;
+            test_param.N_phi = 40;
+            test_param.N_rho = 40;
             
             cargo = rect_load(center, center_mass, orientation, dimensions);
             pos = center + [0; 0.6];
@@ -301,7 +310,7 @@ classdef tester
             if(view == true)
                 figure()
                 hold on
-                robot_flock.plotVoronoiTessellationDetailed(3)
+                robot_flock.plotVoronoiTessellationDetailed(1)
                 robot_flock.plot();
                 robot_flock.plotCentroids();
             end
@@ -312,6 +321,70 @@ classdef tester
             flag = flag_x && flag_y;
         end
         
+        
+        function flag = reachWayPoint(obj, view)
+            center = [obj.map.XWorldLimits(2) / 2 ; obj.map.YWorldLimits(2) / 2]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            param_test.range = 2;          % [m] max observable range
+            param_test.comm_range = 5;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 60;           % division of the radius for discretization
+            param_test.N_phi = 90;           % division of the angle for discretization
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+            
+            agents(1) = agent('001', [obj.map.XWorldLimits(2) / 2 + 0.5; 2.5], param_test, cargo, obj.map);
+            agents(2) = agent('002', [obj.map.XWorldLimits(2) / 2 + 0.5; 1.5], param_test, cargo, obj.map);
+            agents(3) = agent('003', [obj.map.XWorldLimits(2) / 2 - 0.5; 1.5], param_test, cargo, obj.map);
+            agents(4) = agent('004', [obj.map.XWorldLimits(2) / 2 - 0.5; 2.5], param_test, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts);
+            
+            u = [0.3,0]; % move 30 centimeters upwards 
+            dest = robot_flock.setTrajectory(u);
+            robot_flock.setWayPoints(dest);
+            
+            if(view == true)
+                figure()
+                hold on
+                robot_flock.plot();
+                robot_flock.plotAgentsPath(dest);
+            end
+            exit = false;
+            e = 0.05; % distance from waypoints that every agent has to reach
+            n = 1;
+            % if the agents don't reach the waypoint in less than 30 steps,
+            % the test fails
+            while(exit == false && n < 30)
+                % communication
+                robot_flock.meetNeighbours(); % meat neighbours
+                robot_flock.sendScan(); % send scan
+                % visibility set and Voronoi
+                robot_flock.computeVisibilitySets();
+                robot_flock.connectivityMaintenance();
+                robot_flock.computeVoronoiTessellation();
+                robot_flock.applyWayPointDensity(0.2);
+                robot_flock.computeVoronoiCentroids();
+                % movement
+                robot_flock.moveToCentroids(1);
+                reached = robot_flock.areWayPointsReached(e);
+                exit = all(reached);
+                n = n + 1;
+            end
+            
+            if(view == true)
+                figure()
+                hold on
+                grid on
+                robot_flock.plotVoronoiTessellationDetailed(1)
+                robot_flock.plot();
+                robot_flock.plotCentroids();
+            end
+            
+            flag = reached;
+            
+        end
         
         function runAll(obj, view)
             e = obj.centroidOmogeneus();
@@ -367,6 +440,12 @@ classdef tester
                 fprintf('connectivity maintenance test: \t failed\n');
             else
                 fprintf('connectivity maintenance test: \t successeful\n');
+            end
+            e = obj.reachWayPoint(view);
+            if(e == false)
+                fprintf('reach way point test: \t failed\n');
+            else
+                fprintf('reach way point test: \t successeful\n');
             end
         end
     end

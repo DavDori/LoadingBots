@@ -100,7 +100,7 @@ classdef agent < handle
         function clearNeighbours(obj)
             global index;
             index = 1;
-            obj.Neighbours = []; 
+            obj.Neighbours = [];
         end
         
         
@@ -199,7 +199,7 @@ classdef agent < handle
         function computeVisibilitySet(obj)
             % compute the visibility set of the agent. Has to be computed
             % before the Voronoi cell calculation
-            agent_scan = scan(obj);
+            agent_scan = obj.scan();
             obj.Voronoi_cell.visibilitySet(agent_scan);
         end
         
@@ -306,6 +306,16 @@ classdef agent < handle
             end
         end
         
+        
+        function reached = isWayPointReached(obj, error)
+            % check if the position of the agent is within an error away
+            % from the waypoint location.
+            q = obj.way_point - obj.position;
+            dist = sqrt(q' * q);
+            reached = dist < error;
+        end
+        
+        
         % METHODS: representation
         
         function plot(obj) 
@@ -324,11 +334,14 @@ classdef agent < handle
         
         
         function plotVoronoiCellDetailed(obj, step)
+            % plot a detailed version of the of the voronoi cell
+            % considering the density of every point
             obj.Voronoi_cell.plot(obj.position, step); 
         end
         
         
         function print(obj)
+            % print basic data of the agent
             fprintf('Agent %s info:\n', obj.name);
             fprintf('position: %f, %f \t centroid position %f, %f \n', obj.position, obj.Voronoi_cell.centroid);
             fprintf('ideal position: %f, %f \t way point %f, %f \n', obj.ideal_position, obj.way_point);
