@@ -29,10 +29,12 @@ classdef tester
             cargo = rect_load(center, center_mass, orientation, dimensions);
             
             agents(1) = agent('001', [2; 2.5], obj.param, cargo, obj.map);
-            robot_flock = flock(agents, cargo, obj.Ts);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
+            robot_flock.applyConstantDensity();
+            
             c = robot_flock.computeVoronoiCentroids();
             e = abs(c' - robot_flock.agents.position());
             if(e(1) < obj.max_error && e(2) < obj.max_error)
@@ -55,17 +57,24 @@ classdef tester
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = rect_load(center, center_mass, orientation, dimensions);
-
-            agents(1) = agent('001', cargo.center, obj.param, cargo, obj.map);
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 90;           % division of the angle for discretization
+            
+            agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             sf = 1;
             % first test
-            point = center + obj.param.range / 2;
+            point = center + param_test.range / 2;
             
             robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point, sf);
+            
             cell = robot_flock.agents(1).Voronoi_cell.cell_density;
             [~, index] = max(cell(:));
             [i, j] = ind2sub(size(cell), index);
@@ -79,8 +88,10 @@ classdef tester
                         abs(p(2) - point(2)) < err_p;
                     
             % SECOND TEST
-            point_2 = center + obj.param.range * 1.5;
+            % point outside the visibility range
+            point_2 = center + param_test.range * 1.5;
             
+            robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point_2, sf);
             cell = robot_flock.agents(1).Voronoi_cell.cell_density;
@@ -91,7 +102,7 @@ classdef tester
             phi = j * robot_flock.agents(1).Voronoi_cell.phi_res;
             
             phi_point = atan2(point_2(2) - center(2), point_2(1) - center(1));
-            check_rho = rho >= obj.param.range - obj.max_error;
+            check_rho = rho >= param_test.range - obj.max_error;
             % NOTE: atan2 returns a value between -pi and pi, on the other
             % hand, the values are regarded as from 0 to 2pi
             check_phi = abs(phi - phi_point) < obj.max_error * 10;
@@ -110,7 +121,7 @@ classdef tester
 
             agents(1) = agent('001', cargo.center, obj.param, cargo, obj.map);
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             centroid = [0.2; 0.2]; % custom centroid position
             % set centroid 
             robot_flock.agents.Voronoi_cell.centroid = centroid;
@@ -138,11 +149,17 @@ classdef tester
             orientation = pi/2;         % [rad]
             cargo = rect_load(center, center_mass, orientation, dimensions);
             
-            dist = obj.param.radius * 1.1;
-            agents(1) = agent('001', [2 + dist; 0], obj.param, cargo, obj.map);
-            agents(2) = agent('002', [2 - dist; 0], obj.param, cargo, obj.map);
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 30;           % division of the angle for discretization
+            dist = param_test.radius * 1.1;
+            agents(1) = agent('001', [2 + dist; 0], param_test, cargo, obj.map);
+            agents(2) = agent('002', [2 - dist; 0], param_test, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours();
             robot_flock.computeVisibilitySets();
@@ -161,7 +178,7 @@ classdef tester
                 grid on
                 hold on
                 axis equal
-                robot_flock.plotVoronoiTessellation();
+                robot_flock.plotVoronoiTessellationDetailed(1);
                 robot_flock.plot()
                 robot_flock.plotCentroids();
                 hold off
@@ -192,7 +209,7 @@ classdef tester
             vertex = computeVertexPositions(cargo); 
             % set the agent at 1 vertex
             agents(1) = agent('001', vertex(1,:), default_param, cargo, obj.map);
-            robot_flock = flock(agents, cargo, obj.Ts);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours();
             robot_flock.computeVisibilitySets();
@@ -215,14 +232,19 @@ classdef tester
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = rect_load(center, center_mass, orientation, dimensions);
-
-            agents(1) = agent('001', cargo.center, obj.param, cargo, obj.map);
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 45;           % division of the angle for discretization
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             sf = 0.5;
             % first test
-            point1 = center + obj.param.range / 2;
-            point2 = center - obj.param.range / 2;
+            point1 = center + param_test.range / 2;
+            point2 = center - param_test.range / 2;
             
             robot_flock.computeVisibilitySets();
             robot_flock.computeVoronoiTessellation();
@@ -241,7 +263,7 @@ classdef tester
                 axis equal
                 show(obj.map)
                 robot_flock.plot();
-                robot_flock.plotVoronoiTessellationDetailed(10);
+                robot_flock.plotVoronoiTessellationDetailed(1);
             end
         end
         
@@ -267,7 +289,7 @@ classdef tester
             pos = pos + [0; param_test.comm_range * 2]; % out of range of both 1,2
             agents(3) = agent('003', pos, param_test, cargo, obj.map);
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours(); 
             robot_flock.sendScan();
@@ -298,7 +320,7 @@ classdef tester
             pos = center - [0.5; 0.2]; % in range of 1
             agents(3) = agent('003', pos, test_param, cargo, map_cm);
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             robot_flock.meetNeighbours(); % meat neighbours
             robot_flock.sendScan(); % send scan
             robot_flock.computeVisibilitySets();
@@ -339,7 +361,7 @@ classdef tester
             agents(3) = agent('003', [obj.map.XWorldLimits(2) / 2 - 0.5; 1.5], param_test, cargo, obj.map);
             agents(4) = agent('004', [obj.map.XWorldLimits(2) / 2 - 0.5; 2.5], param_test, cargo, obj.map);
             
-            robot_flock = flock(agents, cargo, obj.Ts);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             u = [0.3,0]; % move 30 centimeters upwards 
             dest = robot_flock.setTrajectory(u);

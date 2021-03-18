@@ -212,6 +212,33 @@ classdef agent < handle
         end
         
         
+        function computeCellCollisionAvoidance(obj)
+            % compute cell avoiding collisions with agents
+            obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, 2 * obj.dimension);
+        end
+        
+        
+        function computeCellFormation(obj, relax_factor)
+            % uses collision avoidance setting as min distance the distance
+            % between ideal position and each agent, considering a
+            % relax_factor
+            formation_factors = obj.setFormationFactors(relax_factor);
+            obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, formation_factors);
+        end
+        
+        
+        function ff = setFormationFactors(obj, relax_factor)
+            % has to be computed when the ideal position has been set.
+            % Find the distance that the robot has to keep from its
+            % neighbours in order to achive a formation movement
+            n = length(obj.Neighbours);
+            ff = zeros(n, 1);
+            for i = 1:n
+                dist = distance2D(obj.Neighbours(i).position', obj.ideal_position);
+                ff(i) = dist * (1 - relax_factor);
+            end
+        end
+        
         function applyVoronoiCargoLimits(obj, offset)
             % apply cargo limits on the cell tessellation
             obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset);

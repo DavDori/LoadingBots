@@ -6,14 +6,16 @@ classdef flock < handle
         agents agent
         cargo rect_load
         n_agents (1,1) double {mustBeNumeric}
+        formation_factor (1,1) double {mustBeNumeric}
     end
     
     methods
-        function obj = flock(agents_array, box, sampling_time)
+        function obj = flock(agents_array, box, sampling_time, xi)
             %FLOCK 
             obj.agents = agents_array;
             obj.n_agents = length(agents_array);
             obj.cargo = box;
+            obj.formation_factor = xi;
             for a = obj.agents
                 a.Ts = sampling_time;
             end
@@ -116,9 +118,20 @@ classdef flock < handle
         
         function computeVoronoiTessellation(obj)
             % compute the Voronoi tessellation of a discretization of the
-            % nearby area for every agent in the flock 
+            % nearby area for every agent in the flock. Moreover it takes 
+            % into account collision avoidance
             for a = obj.agents
-                computeVoronoiCell(a); 
+                a.computeCellCollisionAvoidance(); 
+            end
+        end
+        
+        
+        function computeVoronoiTessellationFF(obj)
+            % compute the Voronoi tessellation of a discretization of the
+            % nearby area for every agent in the flock. Moreover it takes 
+            % into account formation facor
+            for a = obj.agents
+                a.computeCellFormation(); 
             end
         end
         
@@ -337,6 +350,10 @@ classdef flock < handle
                 a.print();
                 fprintf('\n');
             end
+        end
+        
+        function set.formation_factor(obj, xi)
+            obj.formation_factor = xi;
         end
     end
 end

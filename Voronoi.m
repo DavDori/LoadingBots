@@ -32,34 +32,6 @@ classdef Voronoi < handle
         end
         
         
-        function computeCell(obj, Neighbours, agent_size)
-            % discretize a circular space around the agent. Set to 1 the
-            % point closer to the agent and to 0 those closer to the
-            % neighbour agents.
-            % NOTE: neighbours have to be defined in the local refernce
-            % frame relative to the current agent.
-            % define resolution of the angle and radius.
-            % NOTE: first a visibility set has to be computed
-            if(isempty(obj.visibility_set))
-                error('Visibility set has to be computed before this operation');
-            end
-            initCells(obj);
-            tmp_cell = obj.visibility_set;
-            % for every point in the cell check if it's closer to agent
-            for i = 1:obj.phi_n % for every angle
-                for j = 1:sum(obj.visibility_set(:,i)) % for some radius in the visibility set
-                    rho = j * obj.rho_res;
-                    phi = i * obj.phi_res;
-                    [x, y] = polar2cartesian(rho, phi);
-                    point = [x; y];
-                    
-                    tmp_cell(j,i) = isCloser(Neighbours, point, agent_size);
-                end
-            end
-            obj.cell_tessellaion = tmp_cell;
-        end
-        
-        
         function visibilitySet(obj, agent_scan)
             % discretize a circular space around the agent and define the
             % visibility set of the agent
@@ -118,6 +90,63 @@ classdef Voronoi < handle
             obj.visibility_set = tmp_cell;
         end
         
+        
+        function computeCell(obj, pos, Neighbours, min_agents_dist)
+            if(isempty(obj.visibility_set))
+                error('Visibility set has to be computed before this operation');
+            end
+            initCells(obj);
+            tmp_cell = obj.visibility_set;
+            % for every point 
+            for i = 1:obj.rho_n % for every angle
+                for j = 1:obj.phi_n % for some radius
+                    if(obj.visibility_set(i,j) == 1)
+                        % compute the point in the absolute ref. frame
+                        status = obj.pointDomain(i, j, pos, Neighbours, min_agents_dist);
+                        if(status == true)
+                            tmp_cell(i,j) = 1;
+                            break;
+                        end
+                    end
+                end
+            end
+            obj.cell_tessellaion = tmp_cell;
+        end
+        
+        
+        function status = pointDomain(obj, i, j, pos, Neighbours, min_agents_dist)
+            rho = i * obj.rho_res;
+            phi = j * obj.phi_res;
+            [x, y] = polar2cartesian(rho, phi);
+            point = [x; y] + pos;
+            % distance between point and agent
+            dist_point_agent = distance2D(point, pos);
+            multiple_values = length(min_agents_dist) > 1;
+            for k = 1:length(Neighbours) % for every neighbour
+                if(multiple_values == true)
+                    th = min_agents_dist(k);
+                else
+                    th = min_agents_dist;
+                end
+                % distance between agent and neighbour
+                dist_agent_neighbour = distance2D(pos, Neighbours(k).position');
+
+                if(th > dist_agent_neighbour / 2)
+                    factor = 2 * th / dist_agent_neighbour - 1;
+                    delta_pos = (pos - Neighbours(k).position') * factor;
+                    neighbour_pos = Neighbours(k).position' + delta_pos;
+                else
+                    neighbour_pos = Neighbours(k).position';
+                end
+                % modifies distance 
+                dist_point_neighbour = distance2D(point, neighbour_pos);
+                if(dist_point_neighbour < dist_point_agent)
+                    status = false;
+                    break;
+                end
+            end
+        end
+        
             
         function index = getAngleIndex(obj, angle)
             % compute the approximation of the angle and the corresponding
@@ -155,7 +184,7 @@ classdef Voronoi < handle
             % cell and return the resulting cell 
             tmp_cell = obj.cell_tessellaion;
             
-            % for every point in the cell check if it's closer to agent
+            % for every point apply the density function
             for i = 1:obj.phi_n % for every angle
                 for j = 1:obj.rho_n % for some radius
                     rho = j * obj.rho_res;
@@ -165,20 +194,28 @@ classdef Voronoi < handle
             end
             % calculate the normalizer for the applied density
             norm = sum(tmp_cell(:)); 
-            % update the current density
-            obj.cell_density = obj.cell_density + tmp_cell / norm;
+            if(isempty(obj.cell_density) == true)
+                obj.cell_density = tmp_cell / norm;
+            else
+                obj.cell_density = obj.cell_density + tmp_cell / norm;
+            end
         end
         
         
-        function cell_tmp = addConstantDensity(obj, c)
+        function addConstantDensity(obj, c)
             % the calculation of the centroid depends on the cell_density.
             % In the case of no specified density o constant density this
             % function is used
             if(nargin == 1)
                 c = 1;  %default value
             end
-            cell_tmp = obj.cell_tessellaion * c;
-            obj.cell_density = obj.cell_density + cell_tmp;
+            tmp_cell = obj.cell_tessellaion * c;
+            
+            if(isempty(obj.cell_density) == true)
+                obj.cell_density = tmp_cell;
+            else
+                obj.cell_density = obj.cell_density + tmp_cell;
+            end
         end
         
         
