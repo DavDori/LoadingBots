@@ -5,7 +5,6 @@ classdef Voronoi < handle
     properties
         visibility_set {mustBeNumeric} % points seen 
         cell_density {mustBeNumeric} % density of each element of the cell
-        cell_tessellaion {mustBeNumeric} % binary vision of the cell
         
         centroid {mustBeNumeric}
         rho_res {mustBeNumeric}
@@ -102,26 +101,24 @@ classdef Voronoi < handle
                 for j = 1:obj.phi_n % for some radius
                     if(obj.visibility_set(i,j) == 1)
                         % compute the point in the absolute ref. frame
-                        status = obj.pointDomain(i, j, pos, Neighbours, min_agents_dist);
-                        if(status == true)
-                            tmp_cell(i,j) = 1;
-                            break;
+                        inside = obj.pointDomain(i, j, pos, Neighbours, min_agents_dist);
+                        if(inside == false)
+                            tmp_cell(i,j) = 0;
                         end
                     end
                 end
             end
-            obj.cell_tessellaion = tmp_cell;
+            obj.visibility_set = tmp_cell;
         end
         
         
-        function status = pointDomain(obj, i, j, pos, Neighbours, min_agents_dist)
-            rho = i * obj.rho_res;
-            phi = j * obj.phi_res;
-            [x, y] = polar2cartesian(rho, phi);
-            point = [x; y] + pos;
+        function inside = pointDomain(obj, i, j, pos, Neighbours, min_agents_dist)
+            inside = true;
+            point = obj.getPoint(i,j) + pos;
             % distance between point and agent
             dist_point_agent = distance2D(point, pos);
             multiple_values = length(min_agents_dist) > 1;
+            
             for k = 1:length(Neighbours) % for every neighbour
                 if(multiple_values == true)
                     th = min_agents_dist(k);
@@ -141,10 +138,20 @@ classdef Voronoi < handle
                 % modifies distance 
                 dist_point_neighbour = distance2D(point, neighbour_pos);
                 if(dist_point_neighbour < dist_point_agent)
-                    status = false;
+                    inside = false;
                     break;
                 end
             end
+        end
+        
+        
+        function point = getPoint(obj, i, j)
+            % converts a position in the cell into a point in the local
+            % reference frame
+            rho = i * obj.rho_res;
+            phi = j * obj.phi_res;
+            [x, y] = polar2cartesian(rho, phi);
+            point = [x; y];
         end
         
             
@@ -161,7 +168,7 @@ classdef Voronoi < handle
         function tmp_cell = applyCargoLimits(obj, agent_position, cargo, offset)
             % for every point in the cell check if it's in the cargo domain
             % the cell value is kept, otherwise it's set to 0
-            tmp_cell = obj.cell_tessellaion;
+            tmp_cell = obj.visibility_set;
             
             for i = 1:obj.phi_n % for every angle
                 for j = 1:obj.rho_n % for every radius in the visibility set
@@ -175,21 +182,23 @@ classdef Voronoi < handle
                     end
                 end
             end
-            obj.cell_tessellaion = tmp_cell;
+            obj.visibility_set = tmp_cell;
         end
         
         
         function tmp_cell = applyDensity(obj, fun_d)
             % apply the desnsity function on every point of the Voronoi
             % cell and return the resulting cell 
-            tmp_cell = obj.cell_tessellaion;
+            tmp_cell = obj.visibility_set;
             
             % for every point apply the density function
             for i = 1:obj.phi_n % for every angle
                 for j = 1:obj.rho_n % for some radius
-                    rho = j * obj.rho_res;
-                    phi = i * obj.phi_res;
-                    tmp_cell(j,i) = fun_d(rho, phi) * obj.cell_tessellaion(j,i);
+                    if(obj.visibility_set(j,i) == 1)
+                        rho = j * obj.rho_res;
+                        phi = i * obj.phi_res;
+                        tmp_cell(j,i) = fun_d(rho, phi);
+                    end
                 end
             end
             % calculate the normalizer for the applied density
@@ -209,7 +218,7 @@ classdef Voronoi < handle
             if(nargin == 1)
                 c = 1;  %default value
             end
-            tmp_cell = obj.cell_tessellaion * c;
+            tmp_cell = obj.visibility_set * c;
             
             if(isempty(obj.cell_density) == true)
                 obj.cell_density = tmp_cell;
@@ -255,7 +264,6 @@ classdef Voronoi < handle
         
         function initCells(obj)
             % initialize the voronoi cell with zeros
-            obj.cell_tessellaion = zeros(obj.rho_n, obj.phi_n);
             obj.cell_density = zeros(obj.rho_n, obj.phi_n);
         end
         
@@ -276,7 +284,7 @@ classdef Voronoi < handle
             for i = 1:step:obj.rho_n % rho
                 for j = 1:step:obj.phi_n % phi
                     % represent every point of cell
-                    if(obj.cell_tessellaion(i,j) == 1)
+                    if(obj.visibility_set(i,j) == 1)
                         [x_local,y_local] = polar2cartesian(i * obj.rho_res, j * obj.phi_res);
                         local_p = [x_local, y_local]';
                         global_p = local2global(position, local_p);
@@ -313,9 +321,6 @@ classdef Voronoi < handle
         end
         function set.centroid(obj, c)
             obj.centroid = c;
-        end
-        function set.cell_tessellaion(obj, tes)
-            obj.cell_tessellaion = tes;
         end
     end
 end

@@ -43,4 +43,4 @@ param.N_phi = 50;
 param.N_rho = 30;
 Testing_unit = tester(map, param, Ts, 1e-2);
 %Testing_unit.collisionDetection(true);
-Testing_unit.runAll(false);
+Testing_unit.runAll(true);

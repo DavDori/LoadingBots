@@ -216,7 +216,7 @@ classdef tester
             
             robot_flock.computeVoronoiTessellationCargo(offset);
             % get the points in the cell that are set to 1
-            p = sum(robot_flock.agents.Voronoi_cell.cell_tessellaion, 'all');
+            p = sum(robot_flock.agents.Voronoi_cell.visibility_set, 'all');
             % get the total amount of points
             p_tot = robot_flock.agents.Voronoi_cell.rho_n * robot_flock.agents.Voronoi_cell.phi_n;
             

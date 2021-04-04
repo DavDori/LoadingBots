@@ -110,7 +110,7 @@ classdef flock < handle
             % nearby area for every agent in the flock considering the
             % perimeter of the cargo
             for a = obj.agents
-                a.computeVoronoiCell();
+                a.computeCellCollisionAvoidance();
                 a.applyVoronoiCargoLimits(offset);
             end
         end
@@ -215,7 +215,7 @@ classdef flock < handle
             % each agent
             for i = 1:obj.n_agents
                 % calculate the destination for each agent
-                dest_i = obj.agents(i).computeWayPoint(dest');
+                obj.agents(i).computeWayPoint(dest');
             end
         end
         

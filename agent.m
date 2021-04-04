@@ -204,14 +204,6 @@ classdef agent < handle
         end
         
         
-        function computeVoronoiCell(obj)
-            % compute the Voronoi Cell of the agent. Has to be computed
-            % after the visibility set calculation.
-            Neighbours_local_position = getNeighboursLocalPosition(obj);
-            obj.Voronoi_cell.computeCell(Neighbours_local_position, obj.dimension);
-        end
-        
-        
         function computeCellCollisionAvoidance(obj)
             % compute cell avoiding collisions with agents
             obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, 2 * obj.dimension);
