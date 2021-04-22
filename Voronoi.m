@@ -65,7 +65,7 @@ classdef Voronoi < handle
                             % reference frame of the Neighbour
                             q = point - Neighbours(k).position';
                             dist = sqrt(q'*q); % distance between point and neighbour
-                            if(dist > range_max)
+                            if(dist > range_max(k))
                                 tmp_cell(i,j) = 0;
                                 break;
                             else

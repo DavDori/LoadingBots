@@ -10,10 +10,9 @@ classdef tester
     end
     
     methods
-        function obj = tester(map, parameters, sampling_time, position_error)
+        function obj = tester(map, sampling_time, position_error)
             %TESTER Construct an instance of this class
             obj.map = map;
-            obj.param = parameters;
             obj.Ts = sampling_time;
             obj.max_error = position_error;
         end
@@ -22,13 +21,20 @@ classdef tester
         function flag = centroidOmogeneus(obj)
             % Test wheather the centroid of an agent without any obstacle
             % around is the agent position
+            
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 90;           % division of the angle for discretization
+            
             center = [2 ; 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = rect_load(center, center_mass, orientation, dimensions);
             
-            agents(1) = agent('001', [2; 2.5], obj.param, cargo, obj.map);
+            agents(1) = agent('001', [2; 2.5], param_test, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.computeVisibilitySets();
@@ -113,13 +119,20 @@ classdef tester
             % test the movement of the robot. Given a the position of the
             % centroid and set the proportional parameter such that the
             % robot reaches exactly the centroid after a simulation step.
+            
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            
             center = [2 ; 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = rect_load(center, center_mass, orientation, dimensions);
 
-            agents(1) = agent('001', cargo.center, obj.param, cargo, obj.map);
+            agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             centroid = [0.2; 0.2]; % custom centroid position
@@ -200,15 +213,17 @@ classdef tester
             orientation = 0;         % [rad]
             offset = 0;
             
-            default_param = obj.param;
-            default_param.N_phi = 140;
-            default_param.N_rho = 140;
-            default_param.range = 1;
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 140;           % division of the radius for discretization
+            param_test.N_phi = 140;           % division of the angle for discretization
+            
             % cargo has to be a rectangle
             cargo = rect_load(center, center_mass, orientation, dimensions);
             vertex = computeVertexPositions(cargo); 
             % set the agent at 1 vertex
-            agents(1) = agent('001', vertex(1,:), default_param, cargo, obj.map);
+            agents(1) = agent('001', vertex(1,:), param_test, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours();
@@ -232,6 +247,7 @@ classdef tester
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = rect_load(center, center_mass, orientation, dimensions);
+            
             param_test.range = 1;          % [m] max observable range
             param_test.comm_range = 1.2;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
@@ -307,18 +323,20 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            test_param = obj.param;
-            test_param.range = 1;
-            test_param.N_phi = 40;
-            test_param.N_rho = 40;
+            
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 40;           % division of the radius for discretization
+            param_test.N_phi = 40;           % division of the angle for discretization
             
             cargo = rect_load(center, center_mass, orientation, dimensions);
             pos = center + [0; 0.6];
-            agents(1) = agent('001', pos, test_param, cargo, map_cm);
+            agents(1) = agent('001', pos, param_test, cargo, map_cm);
             pos = center - [-0.5; 0.2]; % in range of 1
-            agents(2) = agent('002', pos, test_param, cargo, map_cm);
+            agents(2) = agent('002', pos, param_test, cargo, map_cm);
             pos = center - [0.5; 0.2]; % in range of 1
-            agents(3) = agent('003', pos, test_param, cargo, map_cm);
+            agents(3) = agent('003', pos, param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             robot_flock.meetNeighbours(); % meat neighbours
@@ -349,6 +367,7 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
+            
             param_test.range = 2;          % [m] max observable range
             param_test.comm_range = 5;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
@@ -412,6 +431,7 @@ classdef tester
             % Test the collision detection with two agents, their centroids
             % should move in opposite directions and their Voronoi cells
             % should show a gap instead of touching
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
             
             center = [2 ; 2]; % [m]
             center_mass = [0;0];        % [m]
@@ -420,22 +440,23 @@ classdef tester
             cargo = rect_load(center, center_mass, orientation, dimensions);
             
             
-            param_test.range = 3;          % [m] max observable range
-            param_test.comm_range = 5;     % [m] max connection distance
+            param_test.range = 2;          % [m] max observable range
+            param_test.comm_range = 3;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
-            param_test.N_rho = 60;           % division of the radius for discretization
-            param_test.N_phi = 60;           % division of the angle for discretization
+            param_test.N_rho = 100;           % division of the radius for discretization
+            param_test.N_phi = 100;           % division of the angle for discretization
             
-            agents(1) = agent('001', [2 + 1; 0], param_test, cargo, obj.map);
-            agents(2) = agent('002', [2 - 1; 0], param_test, cargo, obj.map);
+            agents(1) = agent('001', [2+1; 2 + 0], param_test, cargo, map_cm);
+            agents(2) = agent('002', [2-1; 2 + 0], param_test, cargo, map_cm);
+            agents(3) = agent('003', [2; 2 + 1.5], param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             robot_flock.fixFormation();
             robot_flock.meetNeighbours();
             robot_flock.sendScan();
             robot_flock.computeVisibilitySets();
-            robot_flock.connectivityMaintenance();
-            robot_flock.computeVoronoiTessellationFF(0.1);
+            robot_flock.connectivityMaintenance(0.05);
+            robot_flock.computeVoronoiTessellationFF(0.05);
             robot_flock.applyConstantDensity();
             robot_flock.computeVoronoiCentroids();
 

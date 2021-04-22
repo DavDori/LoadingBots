@@ -214,25 +214,27 @@ classdef agent < handle
             % uses collision avoidance setting as min distance the distance
             % between ideal position and each agent, considering a
             % relax_factor
-            formation_factors = obj.setFormationFactors(relax_factor);
-            obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, formation_factors);
+            formation_lower_bound = obj.setFormationLowerBound(relax_factor);
+            obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, formation_lower_bound);
         end
         
         
-        function ff = setFormationFactors(obj, relax_factor)
+        function lb = setFormationLowerBound(obj, relax_factor)
             % has to be computed when the ideal position has been set.
             % Find the distance that the robot has to keep from its
-            % neighbours in order to achive a formation movement
+            % neighbours in order to achive a formation movement more or
+            % less consrained in an area
             n = length(obj.Neighbours);
-            ff = zeros(n, 1);
+            lb = zeros(n, 1);
             for i = 1:n
                 % the ideal_position is defined in the cargo refernce frame but
                 % it has to be changed in the global ref frame
                 point = obj.getIdealPositionGlobal();
                 dist = distance2D(obj.Neighbours(i).position', point);
-                ff(i) = dist * (1 - relax_factor);
+                lb(i) = dist - relax_factor;
             end
         end
+        
         
         function applyVoronoiCargoLimits(obj, offset)
             % apply cargo limits on the cell tessellation
@@ -240,11 +242,33 @@ classdef agent < handle
         end
         
         
-        function applyConnectivityMaintenance(obj)
+        function applyConnectivityMaintenance(obj, relax_factor)
             % compute the union between the neighbours visibility sets
+            if(nargin > 1)
+                bound = computeUpperBoundCM(obj, relax_factor); 
+                upper_bound = min(obj.lidar_range, bound);
+            else
+                upper_bound = obj.lidar_range * ones(size(obj.Neighbours, 2));
+            end
+            % POSSIBLE FIX: iterate for every neighbour outside!!!
             obj.Voronoi_cell.unionVisibilitySets(obj.position,...
-                obj.lidar_range, obj.Neighbours, obj.Neighbours_scan);
+                upper_bound, obj.Neighbours, obj.Neighbours_scan);
         end
+        
+        
+        function ub = computeUpperBoundCM(obj, relax_factor)
+            % compute the upper bound in the case of formation movement
+            n = length(obj.Neighbours);
+            ub = zeros(n, 1);
+            for i = 1:n
+                % the ideal_position is defined in the cargo refernce frame but
+                % it has to be changed in the global ref frame
+                point = obj.getIdealPositionGlobal();
+                dist = distance2D(obj.Neighbours(i).position', point);
+                ub(i) = dist + relax_factor;
+            end
+        end
+        
         
         function clearScan(obj)
             % always to use after usage of sendScan so that the index gets reset       

@@ -144,11 +144,17 @@ classdef flock < handle
         end
         
         
-        function connectivityMaintenance(obj)
+        function connectivityMaintenance(obj, relax_factor)
             % modify the voronoi cells of every agent to allow connectivity
             % maintenance
-            for a = obj.agents
-                a.applyConnectivityMaintenance();
+            if(nargin > 1)
+                for a = obj.agents
+                    a.applyConnectivityMaintenance(relax_factor);
+                end
+            else
+                for a = obj.agents
+                    a.applyConnectivityMaintenance();
+                end
             end
         end
         

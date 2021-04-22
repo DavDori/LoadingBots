@@ -39,9 +39,6 @@ sim_time = 2;
 % comment if not needed
 fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
-param.N_phi = 50;
-param.N_rho = 30;
-Testing_unit = tester(map, param, Ts, 1e-2);
+Testing_unit = tester(map, Ts, 1e-2);
 Testing_unit.fixedFormation(true);
-%Testing_unit.collisionDetection(true);
-%Testing_unit.runAll(true);
+%Testing_unit.runAll(false);
