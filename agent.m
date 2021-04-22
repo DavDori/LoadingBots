@@ -226,7 +226,10 @@ classdef agent < handle
             n = length(obj.Neighbours);
             ff = zeros(n, 1);
             for i = 1:n
-                dist = distance2D(obj.Neighbours(i).position', obj.ideal_position);
+                % the ideal_position is defined in the cargo refernce frame but
+                % it has to be changed in the global ref frame
+                point = obj.getIdealPositionGlobal();
+                dist = distance2D(obj.Neighbours(i).position', point);
                 ff(i) = dist * (1 - relax_factor);
             end
         end
@@ -291,7 +294,7 @@ classdef agent < handle
             % ideal position
             % the ideal_position is defined in the cargo refernce frame but
             % it has to be changed in the global ref frame
-            point = rotationMatrix(obj.cargo.orientation)' * obj.ideal_position(1:2) + obj.cargo.center;
+            point = obj.getIdealPositionGlobal();
             applyVoronoiPointDensity(obj, point, sf);
         end
 
@@ -332,6 +335,14 @@ classdef agent < handle
             q = obj.way_point - obj.position;
             dist = sqrt(q' * q);
             reached = dist < error;
+        end
+        
+        
+        function ideal_global = getIdealPositionGlobal(obj)
+            % return the global coordinates of the ideal position of the 
+            % robot
+            ideal_global = rotationMatrix(obj.cargo.orientation)' * ...
+                obj.ideal_position(1:2) + obj.cargo.center;
         end
         
         

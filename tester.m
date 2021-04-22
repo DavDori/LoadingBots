@@ -405,8 +405,54 @@ classdef tester
             end
             
             flag = reached;
-            
         end
+        
+        
+        function flag = fixedFormation(obj, flag_plot)
+            % Test the collision detection with two agents, their centroids
+            % should move in opposite directions and their Voronoi cells
+            % should show a gap instead of touching
+            
+            center = [2 ; 2]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 3;          % [m] max observable range
+            param_test.comm_range = 5;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 60;           % division of the radius for discretization
+            param_test.N_phi = 60;           % division of the angle for discretization
+            
+            agents(1) = agent('001', [2 + 1; 0], param_test, cargo, obj.map);
+            agents(2) = agent('002', [2 - 1; 0], param_test, cargo, obj.map);
+            
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
+            robot_flock.fixFormation();
+            robot_flock.meetNeighbours();
+            robot_flock.sendScan();
+            robot_flock.computeVisibilitySets();
+            robot_flock.connectivityMaintenance();
+            robot_flock.computeVoronoiTessellationFF(0.1);
+            robot_flock.applyConstantDensity();
+            robot_flock.computeVoronoiCentroids();
+
+            if(flag_plot == true)
+                figure()
+                grid on
+                hold on
+                axis equal
+                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plot()
+                robot_flock.plotCentroids();
+                hold off
+            end
+            
+            flag = true;
+        end
+        
         
         function runAll(obj, view)
             e = obj.centroidOmogeneus();

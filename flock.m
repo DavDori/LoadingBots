@@ -126,12 +126,12 @@ classdef flock < handle
         end
         
         
-        function computeVoronoiTessellationFF(obj)
+        function computeVoronoiTessellationFF(obj, relax_factor)
             % compute the Voronoi tessellation of a discretization of the
             % nearby area for every agent in the flock. Moreover it takes 
             % into account formation facor
             for a = obj.agents
-                a.computeCellFormation(); 
+                a.computeCellFormation(relax_factor); 
             end
         end
         

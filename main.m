@@ -20,12 +20,12 @@ param.radius = 0.1;         % [m] hitbox of the agent
 param.N_rho = 60;           % division of the radius for discretization
 param.N_phi = 90;           % division of the angle for discretization
 
-cargo = rect_load(st + center, center_mass, orientation, dimensions);
-agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5] + st, param, cargo, map);
-agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5] + st, param, cargo, map);
-agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5] + st, param, cargo, map);
-agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5] + st, param, cargo, map);
-agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2] + st, param, cargo, map);
+% cargo = rect_load(st + center, center_mass, orientation, dimensions);
+% agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5] + st, param, cargo, map);
+% agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5] + st, param, cargo, map);
+% agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5] + st, param, cargo, map);
+% agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5] + st, param, cargo, map);
+% agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2] + st, param, cargo, map);
 
 Ts = 10e-2;
 sim_time = 2;
@@ -42,5 +42,6 @@ fprintf('TESTING SECTION\n');
 param.N_phi = 50;
 param.N_rho = 30;
 Testing_unit = tester(map, param, Ts, 1e-2);
+Testing_unit.fixedFormation(true);
 %Testing_unit.collisionDetection(true);
-Testing_unit.runAll(true);
+%Testing_unit.runAll(true);
