@@ -440,7 +440,7 @@ classdef tester
             cargo = rect_load(center, center_mass, orientation, dimensions);
             
             
-            param_test.range = 2;          % [m] max observable range
+            param_test.range = 2.5;          % [m] max observable range
             param_test.comm_range = 3;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 100;           % division of the radius for discretization
@@ -448,15 +448,17 @@ classdef tester
             
             agents(1) = agent('001', [2+1; 2 + 0], param_test, cargo, map_cm);
             agents(2) = agent('002', [2-1; 2 + 0], param_test, cargo, map_cm);
-            agents(3) = agent('003', [2; 2 + 1.5], param_test, cargo, map_cm);
+            agents(3) = agent('003', [2; 2 + 1], param_test, cargo, map_cm);
+            agents(4) = agent('004', [2; 2 - 1], param_test, cargo, map_cm);
             
+            bound = 0.05;
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             robot_flock.fixFormation();
             robot_flock.meetNeighbours();
             robot_flock.sendScan();
             robot_flock.computeVisibilitySets();
-            robot_flock.connectivityMaintenance(0.05);
-            robot_flock.computeVoronoiTessellationFF(0.05);
+            robot_flock.connectivityMaintenance(bound);
+            robot_flock.computeVoronoiTessellationFF(bound);
             robot_flock.applyConstantDensity();
             robot_flock.computeVoronoiCentroids();
 
@@ -471,7 +473,25 @@ classdef tester
                 hold off
             end
             
-            flag = true;
+            c1 = robot_flock.agents(1, 1).Voronoi_cell.centroid();   
+            c2 = robot_flock.agents(1, 2).Voronoi_cell.centroid(); 
+            c3 = robot_flock.agents(1, 3).Voronoi_cell.centroid();
+            c4 = robot_flock.agents(1, 4).Voronoi_cell.centroid();
+            % c2 and c1 should be very similar due to the symmetric
+            % positioning with respect to 003
+            
+            origin = [0, 0]';
+            
+            d1 = distance2D(c1, origin);
+            d2 = distance2D(c2, origin);
+            d3 = distance2D(c3, origin);
+            d4 = distance2D(c4, origin);
+            
+            if(max([d1,d2,d3,d4]) < obj.max_error)           
+                flag = true;
+            else    
+                flag = false;       
+            end
         end
         
         
@@ -500,7 +520,6 @@ classdef tester
             else
                 fprintf('move to centroid test: \t successeful\n');
             end
-
             [e1, e2] = obj.PointDensity();
             if(e1 == false)
                 fprintf('point density first test: \t failed\n');
@@ -535,6 +554,12 @@ classdef tester
                 fprintf('reach way point test: \t failed\n');
             else
                 fprintf('reach way point test: \t successeful\n');
+            end
+            e = obj.fixedFormation(view);
+            if(e == false)
+                fprintf('fixed formation test: \t failed\n');
+            else
+                fprintf('fixed formation test: \t successeful\n');
             end
         end
     end

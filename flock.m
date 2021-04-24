@@ -236,16 +236,44 @@ classdef flock < handle
         end
                 
         
-        function spreadUnderCargo(obj, steps, offset)
+        function spreadUnderCargo(obj, steps, offset, kd)
             % distributed maximum coverage application
             % update the position of the neighbours
-            kd = 4;
             for i = 1:steps
-                obj.meetNeighbours(); 
+                obj.meetNeighbours();
+                obj.computeVisibilitySets;
                 obj.computeVoronoiTessellationCargo(offset);
                 obj.applyFarFromCenterMassDensity();
                 obj.computeVoronoiCentroids();
                 obj.moveToCentroids(kd);
+            end
+        end
+        
+        
+        function moveFormation(obj, target, formation_limit, kd, max_i)
+            % move the flock to a target position keeping a formation limit
+            % error with a fixed formation. kd parameter determine the
+            % proportional gain in the movement towards the centroid and
+            % max_i the maximum number of iteations.
+            exit = false;
+            e = 0.01; % distance from waypoints that every agent has to reach
+            n = 1;
+            % set destination for each robot
+            robot_flock.setWayPoints(target);
+            while(exit == false && n < max_i)
+                obj.meetNeighbours();
+                obj.sendScan();
+                % voroni cell 
+                obj.computeVisibilitySets();
+                obj.connectivityMaintenance(formation_limit);
+                obj.computeVoronoiTessellationFF(formation_limit);
+                obj.applyConstantDensity();
+                obj.computeVoronoiCentroids();
+                % movement
+                robot_flock.moveToCentroids(kd);
+                reached = robot_flock.areWayPointsReached(e);
+                exit = all(reached);
+                n = n + 1;
             end
         end
             
