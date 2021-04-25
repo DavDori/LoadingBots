@@ -250,16 +250,15 @@ classdef flock < handle
         end
         
         
-        function moveFormation(obj, target, formation_limit, kd, max_i)
+        function moveFormation(obj, dest, formation_limit, k_d, k_WP, max_i)
             % move the flock to a target position keeping a formation limit
-            % error with a fixed formation. kd parameter determine the
+            % error with a fixed formation. k_d parameter determine the
             % proportional gain in the movement towards the centroid and
-            % max_i the maximum number of iteations.
+            % max_i the maximum number of iteations. k_WP is the density
+            % factor applied to the point the robots have to reach.
             exit = false;
             e = 0.01; % distance from waypoints that every agent has to reach
             n = 1;
-            % set destination for each robot
-            robot_flock.setWayPoints(target);
             while(exit == false && n < max_i)
                 obj.meetNeighbours();
                 obj.sendScan();
@@ -267,11 +266,12 @@ classdef flock < handle
                 obj.computeVisibilitySets();
                 obj.connectivityMaintenance(formation_limit);
                 obj.computeVoronoiTessellationFF(formation_limit);
-                obj.applyConstantDensity();
+                obj.applyWayPointDensity(k_WP);
                 obj.computeVoronoiCentroids();
                 % movement
-                robot_flock.moveToCentroids(kd);
-                reached = robot_flock.areWayPointsReached(e);
+                obj.moveToCentroids(k_d);
+                obj.fixFormation();
+                reached = obj.areWayPointsReached(e);
                 exit = all(reached);
                 n = n + 1;
             end
