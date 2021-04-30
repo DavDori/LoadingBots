@@ -187,16 +187,6 @@ classdef flock < handle
         end
         
         
-        function applyIdealPointDensity(obj, sf)
-            % for every robot apply an exponential density function
-            % centered on its way point on the voronoi cell. 'sf' is the
-            % spread factor of the points
-            for a = obj.agents
-                a.applyVoronoiIdealPositionDensity(sf);
-            end
-        end
-        
-        
         function applySinglePointDensity(obj, point, sf)
             % for every robot apply an exponential density function
             % centered on a common point on the voronoi cell. 'sf' is the
@@ -250,7 +240,7 @@ classdef flock < handle
         end
         
         
-        function moveFormation(obj, dest, formation_limit, k_d, k_WP, max_i)
+        function moveFormation(obj, formation_limit, k_d, k_WP, max_i)
             % move the flock to a target position keeping a formation limit
             % error with a fixed formation. k_d parameter determine the
             % proportional gain in the movement towards the centroid and
@@ -270,10 +260,13 @@ classdef flock < handle
                 obj.computeVoronoiCentroids();
                 % movement
                 obj.moveToCentroids(k_d);
-                obj.fixFormation();
+                %obj.fixFormation();
                 reached = obj.areWayPointsReached(e);
                 exit = all(reached);
                 n = n + 1;
+            end
+            if(n >= max_i)
+                waring('Convergance no achieved');
             end
         end
             
@@ -296,16 +289,13 @@ classdef flock < handle
         
         function fixFormation(obj)
             % should be computed after the flock has spread under the
-            % cargo. It saves the current positions of the agents in their
-            % ideal_position variable which is saved in the reference frame
-            % of the cargo
+            % cargo. It sets the bound to keep to the robots
             for a = obj.agents
                 if(a.attached == false)
                     % if the agent is not attached, a warning is thrown
                     fprintf('WARNING: %s is not attached \n', a.name); 
                 end
-                d_pos = a.position - a.cargo.center;
-                a.ideal_position = rotationMatrix(a.cargo.orientation) * d_pos;
+                a.fixBounds();
             end
         end
               

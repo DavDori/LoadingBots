@@ -21,7 +21,7 @@ classdef agent < handle
         Neighbours_scan
         Voronoi_cell Voronoi
         
-        ideal_position (2,1) double {mustBeNumeric} % ideal position relative to the cargo reference frame
+        bounds double {mustBeNumeric} % ideal distances to keep from each neighbour
         way_point (2,1) double {mustBeNumeric} % position to reach
     end
     
@@ -214,25 +214,8 @@ classdef agent < handle
             % uses collision avoidance setting as min distance the distance
             % between ideal position and each agent, considering a
             % relax_factor
-            formation_lower_bound = obj.setFormationLowerBound(relax_factor);
+            formation_lower_bound = obj.bounds - relax_factor;
             obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, formation_lower_bound);
-        end
-        
-        
-        function lb = setFormationLowerBound(obj, relax_factor)
-            % has to be computed when the ideal position has been set.
-            % Find the distance that the robot has to keep from its
-            % neighbours in order to achive a formation movement more or
-            % less consrained in an area
-            n = length(obj.Neighbours);
-            lb = zeros(n, 1);
-            for i = 1:n
-                % the ideal_position is defined in the cargo refernce frame but
-                % it has to be changed in the global ref frame
-                point = obj.getIdealPositionGlobal();
-                dist = distance2D(obj.Neighbours(i).position', point);
-                lb(i) = dist - relax_factor;
-            end
         end
         
         
@@ -244,29 +227,14 @@ classdef agent < handle
         
         function applyConnectivityMaintenance(obj, relax_factor)
             % compute the union between the neighbours visibility sets
-            if(nargin > 1)
-                bound = computeUpperBoundCM(obj, relax_factor); 
-                upper_bound = min(obj.lidar_range, bound);
+            if(nargin > 1) 
+                upper_bounds = min(obj.lidar_range, obj.bounds + relax_factor);
             else
-                upper_bound = obj.lidar_range * ones(size(obj.Neighbours, 2));
+                upper_bounds = obj.lidar_range * ones(size(obj.Neighbours, 2));
             end
             % POSSIBLE FIX: iterate for every neighbour outside!!!
             obj.Voronoi_cell.unionVisibilitySets(obj.position,...
-                upper_bound, obj.Neighbours, obj.Neighbours_scan);
-        end
-        
-        
-        function ub = computeUpperBoundCM(obj, relax_factor)
-            % compute the upper bound in the case of formation movement
-            n = length(obj.Neighbours);
-            ub = zeros(n, 1);
-            for i = 1:n
-                % the ideal_position is defined in the cargo refernce frame but
-                % it has to be changed in the global ref frame
-                point = obj.getIdealPositionGlobal();
-                dist = distance2D(obj.Neighbours(i).position', point);
-                ub(i) = dist + relax_factor;
-            end
+                upper_bounds, obj.Neighbours, obj.Neighbours_scan);
         end
         
         
@@ -311,17 +279,6 @@ classdef agent < handle
             % way point
             applyVoronoiPointDensity(obj, obj.way_point, sf);
         end
-        
-        
-        function applyVoronoiIdealPositionDensity(obj, sf)
-            % apply the density function of an exponential centered in the
-            % ideal position
-            % the ideal_position is defined in the cargo refernce frame but
-            % it has to be changed in the global ref frame
-            point = obj.getIdealPositionGlobal();
-            applyVoronoiPointDensity(obj, point, sf);
-        end
-
                 
         % METHODS: path planning
         
@@ -362,11 +319,14 @@ classdef agent < handle
         end
         
         
-        function ideal_global = getIdealPositionGlobal(obj)
-            % return the global coordinates of the ideal position of the 
-            % robot
-            ideal_global = rotationMatrix(obj.cargo.orientation)' * ...
-                obj.ideal_position(1:2) + obj.cargo.center;
+        function fixBounds(obj)
+            % set as bounds the distance to its neighbours
+            n = length(obj.Neighbours);
+            bds = zeros(n, 1);
+            for i = 1:n
+                bds(i) = distance2D(obj.Neighbours(i).position', obj.position);
+            end
+            obj.bounds = bds;
         end
         
         
@@ -398,7 +358,7 @@ classdef agent < handle
             % print basic data of the agent
             fprintf('Agent %s info:\n', obj.name);
             fprintf('position: %f, %f \t centroid position %f, %f \n', obj.position, obj.Voronoi_cell.centroid);
-            fprintf('ideal position: %f, %f \t way point %f, %f \n', obj.ideal_position, obj.way_point);
+            fprintf('way point %f, %f \n', obj.way_point);
         end
         
         
@@ -424,8 +384,8 @@ classdef agent < handle
         function set.Voronoi_cell(obj, v_cell)
             obj.Voronoi_cell = v_cell;
         end
-        function set.ideal_position(obj, pos)
-            obj.ideal_position = pos; 
+        function set.bounds(obj, pos)
+            obj.bounds = pos; 
         end
     end
 end

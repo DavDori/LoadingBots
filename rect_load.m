@@ -1,4 +1,4 @@
-classdef rect_load
+classdef rect_load < handle
     %LOAD Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -41,11 +41,10 @@ classdef rect_load
             r(4,1:2) = obj.center + rotationMatrix(obj.orientation) * v4; 
         end
                 
-        function pos = getLimitPosition(obj, pos_global_1, pos_global_2)
-            pos_local_1 = rotationMatrix(obj.orientation)' * (pos_global_1 - obj.center);
-            pos_local_2 = rotationMatrix(obj.orientation)' * (pos_global_2 - obj.center);
-            pos = 0;
-        end
+%         function pos = getLimitPosition(obj, pos_global_1, pos_global_2)
+%             pos_local_1 = rotationMatrix(obj.orientation)' * (pos_global_1 - obj.center);
+%             pos_local_2 = rotationMatrix(obj.orientation)' * (pos_global_2 - obj.center);
+%         end
         
         function flag = isInside(obj, absolute_point, offset) 
             % check weather a point is inside the rectangle or not
@@ -80,6 +79,14 @@ classdef rect_load
                     end
                 end
             end
+        end
+        
+        function move(obj, u, ts)
+            % the input u is composed by a vector [linear velocity, angular
+            % velocity]. The object model is that of a unicycle
+            dot = unicycleModel(u , [obj.center; obj.orientation]);
+            obj.center = obj.center + dot(1:2) * ts;
+            obj.orientation = obj.orientation + dot(3) * ts;
         end
         
     end

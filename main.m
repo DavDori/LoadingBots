@@ -21,6 +21,8 @@ param.N_rho = 90;           % division of the radius for discretization
 param.N_phi = 90;           % division of the angle for discretization
 
 cargo = rect_load(st + center, center_mass, orientation, dimensions);
+
+%%
 agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5 - 1] + st, param, cargo, map);
 agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5 - 1] + st, param, cargo, map);
 agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5 - 1] + st, param, cargo, map);
@@ -44,6 +46,7 @@ subplot(1,3,1)
 grid on
 hold on
 axis equal
+show(map)
 robots.plotVoronoiTessellationDetailed(3);
 robots.plot()
 hold off
@@ -53,6 +56,7 @@ robots.spreadUnderCargo(10, 0.2, 4);
 robots.attachAll();
 
 subplot(1,3,2) % plot positions under cargo
+show(map)
 grid on
 hold on
 axis equal
@@ -66,20 +70,23 @@ k_WP = 0.01; % way point density factor
 k_d = 10;  % movement gain toward the centroid
 max_iterations = 30;
 
-u = [0.3,0]; % move 30 centimeters upwards 
-dest = robots.setTrajectory(u);
+v = [0.1, 0.1, 0.1]';
+w = [0.0, 0.2, 0.0]';
+u = [v, w]; % move 30 centimeters upwards 
+dest = robots.setTrajectory(u(1,:));
 robots.setWayPoints(dest); % set destionation for each robot
             
 robots.fixFormation();
 
-robots.moveFormation(dest, formation_limit, k_d, k_WP, max_iterations);
+robots.moveFormation(formation_limit, k_d, k_WP, max_iterations);
 
 subplot(1,3,3) % plot positions after fixed formation movement
 grid on
 hold on
 axis equal
+show(map)
 robots.plotVoronoiTessellationDetailed(1);
-robots.plot()
+robots.plot();
 robots.plotCentroids();
 hold off
 
@@ -87,5 +94,6 @@ hold off
 % comment if not needed
 %fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
+
 %Testing_unit = tester(map, Ts, 1e-2);
 %Testing_unit.runAll(true);
