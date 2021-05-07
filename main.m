@@ -3,10 +3,11 @@ close all
 %clc
 
 %% SET UP
-st = [0;1.9]; % starting position offset (applied to agents and cargo)
+st = [0;0]; % starting position offset (applied to agents and cargo)
 % map
 map = png2BOMap('map_test_1.png',22);
-
+map_width = map.XLocalLimits(2) - map.XLocalLimits(1);
+map_height = map.YLocalLimits(2) - map.YLocalLimits(1);
 % Cargo
 center = [map.XWorldLimits(2) / 2 ; 2 - 1]; % [m]
 center_mass = [0;0];        % [m]
@@ -33,67 +34,77 @@ Ts = 10e-2;
 sim_time = 2;
 
 %% init the flock of robots
-formation_limit = 0.05;
-
-robots = flock(agents, cargo, Ts, 0);
-
-robots.meetNeighbours();
-robots.computeVisibilitySets();
-robots.computeVoronoiTessellation();
-robots.applyConstantDensity();
-figure() % plot initial positions
-subplot(1,3,1)
-grid on
-hold on
-axis equal
-show(map)
-robots.plotVoronoiTessellationDetailed(3);
-robots.plot()
-hold off
+% formation_limit = 0.05;
+% 
+% robots = flock(agents, cargo, Ts, 0);
+% ball = Obstacle(0.2, [1;1], [1;1], Ts);
+% 
+% robots.meetNeighbours();
+% robots.computeVisibilitySets(ball);
+% robots.computeVoronoiTessellation();
+% robots.applyConstantDensity();
+% figure() % plot initial positions
+% subplot(2,2,1)
+% grid on
+% hold on
+% axis equal
+% show(map)
+% robots.plotVoronoiTessellationDetailed(3);
+% robots.plot();
+% hold off
 
 %% Spread under the cargo
-robots.spreadUnderCargo(10, 0.2, 4);
-robots.attachAll();
-
-subplot(1,3,2) % plot positions under cargo
-show(map)
-grid on
-hold on
-axis equal
-robots.plotVoronoiTessellationDetailed(3);
-robots.plot()
-robots.plotCentroids();
-hold off
-
-%% Trajectory planning and movement 
-k_WP = 0.01; % way point density factor
-k_d = 10;  % movement gain toward the centroid
-max_iterations = 30;
-
-v = [0.1, 0.1, 0.1]';
-w = [0.0, 0.2, 0.0]';
-u = [v, w]; % move 30 centimeters upwards 
-dest = robots.setTrajectory(u(1,:));
-robots.setWayPoints(dest); % set destionation for each robot
-            
-robots.fixFormation();
-
-robots.moveFormation(formation_limit, k_d, k_WP, max_iterations);
-
-subplot(1,3,3) % plot positions after fixed formation movement
-grid on
-hold on
-axis equal
-show(map)
-robots.plotVoronoiTessellationDetailed(1);
-robots.plot();
-robots.plotCentroids();
-hold off
+% robots.spreadUnderCargo(10, 0.2, 4);
+% robots.attachAll();
+% 
+% subplot(2,2,2) % plot positions under cargo
+% show(map)
+% grid on
+% hold on
+% axis equal
+% robots.plotVoronoiTessellationDetailed(3);
+% robots.plot()
+% robots.plotCentroids();
+% hold off
+% 
+% %% Trajectory planning and movement 
+% k_WP = 0.01; % way point density factor
+% k_d = 10;  % movement gain toward the centroid
+% max_iterations = 30;
+% 
+% v = [0.1, 0.1, 0.1]';
+% w = [0.0, 0.2, 0.0]';
+% u = [v, w]; % move 30 centimeters upwards 
+% dest = robots.setTrajectory(u(1,:));
+% robots.setWayPoints(dest); % set destionation for each robot
+% 
+% subplot(2,2,3) % plot positions trajectories
+% grid on
+% hold on
+% axis equal
+% show(map)
+% robots.plot();
+% robots.plotAgentsPath(dest);
+% hold off
+% 
+% robots.fixFormation();
+% robots.moveFormation(formation_limit, k_d, k_WP, max_iterations);
+% 
+% subplot(2,2,4) % plot positions after fixed formation movement
+% grid on
+% hold on
+% axis equal
+% show(map)
+% robots.plotVoronoiTessellationDetailed(1);
+% robots.plot();
+% robots.plotCentroids();
+% hold off
 
 %% TESTING SECTION
 % comment if not needed
-%fprintf('TESTING SECTION\n');
+fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
 
-%Testing_unit = tester(map, Ts, 1e-2);
+Testing_unit = tester(map, Ts, 1e-2);
+Testing_unit.obstaclePresence();
 %Testing_unit.runAll(true);

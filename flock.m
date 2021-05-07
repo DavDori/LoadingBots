@@ -52,11 +52,15 @@ classdef flock < handle
         end
         
         
-        function sendScan(obj)
+        function sendScan(obj, obs)
             % every agent send a message to its neighbours containing name
             % and its absolute coordinates
             for i = 1:obj.n_agents
-                scan = obj.agents(i).scan();
+                if(nargin > 1)
+                    scan = obj.agents(i).scan(obs);
+                else
+                    scan = obj.agents(i).scan([]);
+                end
                 for j = 1:obj.n_agents
                     if(i ~= j)
                         obj.agents(i).sendScan(obj.agents(j), scan);
@@ -136,10 +140,14 @@ classdef flock < handle
         end
         
         
-        function computeVisibilitySets(obj)
+        function computeVisibilitySets(obj, obs)
             % compute the visibility set for every agent
+            if nargin < 2
+                obs = [];
+            end
+                
             for a = obj.agents
-                a.computeVisibilitySet(); 
+                a.computeVisibilitySet(obs); 
             end
         end
         
@@ -226,12 +234,15 @@ classdef flock < handle
         end
                 
         
-        function spreadUnderCargo(obj, steps, offset, kd)
+        function spreadUnderCargo(obj, steps, offset, kd, obs)
             % distributed maximum coverage application
             % update the position of the neighbours
+            if nargin < 5
+                obs = [];
+            end
             for i = 1:steps
                 obj.meetNeighbours();
-                obj.computeVisibilitySets;
+                obj.computeVisibilitySets(obs);
                 obj.computeVoronoiTessellationCargo(offset);
                 obj.applyFarFromCenterMassDensity();
                 obj.computeVoronoiCentroids();
@@ -240,7 +251,7 @@ classdef flock < handle
         end
         
         
-        function moveFormation(obj, formation_limit, k_d, k_WP, max_i)
+        function moveFormation(obj, formation_limit, k_d, k_WP, max_i, obs)
             % move the flock to a target position keeping a formation limit
             % error with a fixed formation. k_d parameter determine the
             % proportional gain in the movement towards the centroid and
@@ -249,11 +260,14 @@ classdef flock < handle
             exit = false;
             e = 0.01; % distance from waypoints that every agent has to reach
             n = 1;
+            if nargin < 6
+                obs = [];
+            end
             while(exit == false && n < max_i)
                 obj.meetNeighbours();
                 obj.sendScan();
                 % voroni cell 
-                obj.computeVisibilitySets();
+                obj.computeVisibilitySets(obs);
                 obj.connectivityMaintenance(formation_limit);
                 obj.computeVoronoiTessellationFF(formation_limit);
                 obj.applyWayPointDensity(k_WP);

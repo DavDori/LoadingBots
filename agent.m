@@ -171,17 +171,27 @@ classdef agent < handle
         
         % METHODS: voronoi cell
         
-        function s = scan(obj)
-            % simulate a scan of the nearby area using a lidar sensor
+        function s = scan(obj, obs)
+            % simulate a scan of the nearby area using a lidar sensor. A
+            % moving obstacle object can be passed to increase complexity.
             s = zeros(obj.Voronoi_cell.phi_n, 2);
-
+            new_map = binaryOccupancyMap(obj.map); % copy
+            if(nargin > 1)
+                obs_map = binaryOccupancyMap(obj.map.XLocalLimits(2), ...
+                                             obj.map.YLocalLimits(2), ...
+                                             obj.map.Resolution);
+                obs_map.setOccupancy(obs.center', 1); 
+                obs_map.inflate(obs.radius);
+                syncWith(new_map, obs_map);
+            end
+            
             for n = 1:obj.Voronoi_cell.phi_n
                 % the current orientation of the rover isn't available in
                 % the current version of the code, so it is set to 0°,
                 % always facing right. 
                 phi = n * obj.Voronoi_cell.phi_res;
                 pose = [obj.position', 0]; 
-                point = rayIntersection(obj.map, pose, phi, obj.lidar_range);
+                point = rayIntersection(new_map, pose, phi, obj.lidar_range);
                 
                 if(isnan(point(1)) == true && isnan(point(2)) == true)
                     % free line of sight
@@ -196,10 +206,10 @@ classdef agent < handle
         end
         
         
-        function computeVisibilitySet(obj)
+        function computeVisibilitySet(obj, obs)
             % compute the visibility set of the agent. Has to be computed
             % before the Voronoi cell calculation
-            agent_scan = obj.scan();
+            agent_scan = obj.scan(obs);
             obj.Voronoi_cell.visibilitySet(agent_scan);
         end
         

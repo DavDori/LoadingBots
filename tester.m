@@ -495,6 +495,47 @@ classdef tester
         end
         
         
+        function obstaclePresence(obj)
+            map_cm = png2BOMap('map_test_2.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 3;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            
+            agents = agent('001', center, param_test, cargo, map_cm);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
+            ball = Obstacle(0.2, [1;1.5], [6;0], obj.Ts);
+            figure();
+            for i = 1:4
+                robot_flock.computeVisibilitySets(ball);
+                robot_flock.computeVoronoiTessellation();
+                robot_flock.applyConstantDensity();
+                robot_flock.computeVoronoiCentroids();
+                ball.move();
+
+            
+                subplot(1,4,i)
+                hold on
+                show(map_cm);
+                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plot();
+                robot_flock.plotCentroids();
+                hold off
+                axis equal
+                grid on
+            end
+        end
+        
+        
         function runAll(obj, view)
             e = obj.centroidOmogeneus();
             if(e == false)
