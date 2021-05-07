@@ -176,7 +176,7 @@ classdef agent < handle
             % moving obstacle object can be passed to increase complexity.
             s = zeros(obj.Voronoi_cell.phi_n, 2);
             new_map = binaryOccupancyMap(obj.map); % copy
-            if(nargin > 1)
+            if(isempty(obs) == false)
                 obs_map = binaryOccupancyMap(obj.map.XLocalLimits(2), ...
                                              obj.map.YLocalLimits(2), ...
                                              obj.map.Resolution);

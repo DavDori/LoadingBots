@@ -37,7 +37,7 @@ classdef tester
             agents(1) = agent('001', [2; 2.5], param_test, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             robot_flock.computeVoronoiTessellation();
             robot_flock.applyConstantDensity();
             
@@ -77,7 +77,7 @@ classdef tester
             % first test
             point = center + param_test.range / 2;
             
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point, sf);
             
@@ -97,7 +97,7 @@ classdef tester
             % point outside the visibility range
             point_2 = center + param_test.range * 1.5;
             
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point_2, sf);
             cell = robot_flock.agents(1).Voronoi_cell.cell_density;
@@ -175,7 +175,7 @@ classdef tester
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours();
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             robot_flock.computeVoronoiTessellation();
             robot_flock.applyConstantDensity();
             c = robot_flock.computeVoronoiCentroids();
@@ -227,7 +227,7 @@ classdef tester
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours();
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             
             robot_flock.computeVoronoiTessellationCargo(offset);
             % get the points in the cell that are set to 1
@@ -262,7 +262,7 @@ classdef tester
             point1 = center + param_test.range / 2;
             point2 = center - param_test.range / 2;
             
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point1, sf);
             robot_flock.applySinglePointDensity(point2, sf);
@@ -341,7 +341,7 @@ classdef tester
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             robot_flock.meetNeighbours(); % meat neighbours
             robot_flock.sendScan(); % send scan
-            robot_flock.computeVisibilitySets();
+            robot_flock.computeVisibilitySets([]);
             robot_flock.connectivityMaintenance();
             robot_flock.computeVoronoiTessellation();
             robot_flock.applyConstantDensity();
@@ -402,7 +402,7 @@ classdef tester
                 robot_flock.meetNeighbours(); % meat neighbours
                 robot_flock.sendScan(); % send scan
                 % visibility set and Voronoi
-                robot_flock.computeVisibilitySets();
+                robot_flock.computeVisibilitySets([]);
                 robot_flock.connectivityMaintenance();
                 robot_flock.computeVoronoiTessellation();
                 robot_flock.applyWayPointDensity(0.2);
@@ -428,9 +428,7 @@ classdef tester
         
         
         function flag = fixedFormation(obj, flag_plot)
-            % Test the collision detection with two agents, their centroids
-            % should move in opposite directions and their Voronoi cells
-            % should show a gap instead of touching
+            % 
             map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
             
             center = [2 ; 2]; % [m]
@@ -453,10 +451,12 @@ classdef tester
             
             bound = 0.05;
             robot_flock = flock(agents, cargo, obj.Ts, 0);
-            robot_flock.fixFormation();
+            
             robot_flock.meetNeighbours();
             robot_flock.sendScan();
-            robot_flock.computeVisibilitySets();
+            robot_flock.fixFormation();
+            
+            robot_flock.computeVisibilitySets([]);
             robot_flock.connectivityMaintenance(bound);
             robot_flock.computeVoronoiTessellationFF(bound);
             robot_flock.applyConstantDensity();
