@@ -106,5 +106,5 @@ fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
 
 Testing_unit = tester(map, Ts, 1e-2);
-Testing_unit.obstaclePresence();
+Testing_unit.dodgeMovingObstacle(true);
 %Testing_unit.runAll(true);

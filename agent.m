@@ -352,7 +352,7 @@ classdef agent < handle
                 plot(obj.position(1), obj.position(2), 'or')
             end
             circle(obj.position(1), obj.position(2), obj.dimension);
-            circle(obj.position(1), obj.position(2), obj.lidar_range);
+            %circle(obj.position(1), obj.position(2), obj.lidar_range);
             hold off
         end
         

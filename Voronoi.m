@@ -305,7 +305,7 @@ classdef Voronoi < handle
             
             for i = 1:obj.phi_n % for every angle
                 [x_local,y_local] = polar2cartesian(...
-                    sum(obj.cell_tessellaion(:,i) ~= 0) * obj.rho_res, i * obj.phi_res);
+                    sum(obj.visibility_set(:,i) ~= 0) * obj.rho_res, i * obj.phi_res);
                 local_p = [x_local, y_local]';
                 edges(i,:) = local2global(position, local_p);
             end

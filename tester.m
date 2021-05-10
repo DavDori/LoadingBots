@@ -495,7 +495,10 @@ classdef tester
         end
         
         
-        function obstaclePresence(obj)
+        function flag = obstaclePresence(obj, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
             map_cm = png2BOMap('map_test_2.png', 22); % specific map to check connectivity maintenance
             
             center = [2 ; 1]; % [m]
@@ -514,7 +517,10 @@ classdef tester
             agents = agent('001', center, param_test, cargo, map_cm);
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             ball = Obstacle(0.2, [1;1.5], [6;0], obj.Ts);
-            figure();
+            if(flag_plot == true)
+                figure();
+            end
+            centroid = zeros(4,2);
             for i = 1:4
                 robot_flock.computeVisibilitySets(ball);
                 robot_flock.computeVoronoiTessellation();
@@ -522,19 +528,84 @@ classdef tester
                 robot_flock.computeVoronoiCentroids();
                 ball.move();
 
-            
-                subplot(1,4,i)
-                hold on
-                show(map_cm);
-                robot_flock.plotVoronoiTessellationDetailed(1);
-                robot_flock.plot();
-                robot_flock.plotCentroids();
-                hold off
-                axis equal
-                grid on
+                if(flag_plot == true)
+                    subplot(1,4,i)
+                    hold on
+                    show(map_cm);
+                    robot_flock.plotVoronoiTessellationDetailed(1);
+                    robot_flock.plot();
+                    robot_flock.plotCentroids();
+                    hold off
+                    axis equal
+                    grid on
+                end
+                centroid(i,:) = robot_flock.agents(1).Voronoi_cell.centroid;
             end
+            flag_y = all(centroid(:,2) <= 0);
+            flag_x = centroid(2,1) > 0 && centroid(3,1) < 0;
+            flag = flag_y && flag_x;
         end
         
+        
+        function dodgeMovingObstacle(obj, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0; 0];       % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi / 2;       % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 2;          % [m] max observable range
+            param_test.comm_range = 3;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            
+            agents(1) = agent('001', [1.5; 2.1], param_test, cargo, map_cm);
+            agents(2) = agent('002', [1.5; 0.9], param_test, cargo, map_cm);
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
+            
+            ball = Obstacle(0.2, [0; 0.9], [1.2; 0], obj.Ts);
+            
+            if(flag_plot == true)
+                figure();
+            end
+            steps = 24;
+            centroid = zeros(steps, 2);
+            for i = 1:steps
+                robot_flock.meetNeighbours(); % meat neighbours
+                robot_flock.sendScan(); % send scan
+                robot_flock.computeVisibilitySets(ball);
+                robot_flock.connectivityMaintenance();
+                robot_flock.computeVoronoiTessellation();
+                robot_flock.applyConstantDensity();
+                robot_flock.computeVoronoiCentroids();
+                robot_flock.moveToCentroids(2);
+                ball.move();
+
+                if(flag_plot == true)
+                    subplot(6,steps/6,i)
+                    hold on
+                    robot_flock.plotVoronoiTessellation();
+                    robot_flock.plotCentroids();
+                    ball.plot();
+                    hold off
+                    axis equal
+                    grid on
+                end
+                centroid(i,:) = robot_flock.agents(2).Voronoi_cell.centroid;
+            end
+            figure()
+            hold on
+            plot(centroid(:,1));
+            plot(centroid(:,2));
+            hold off
+        end
         
         function runAll(obj, view)
             e = obj.centroidOmogeneus();
@@ -601,6 +672,12 @@ classdef tester
                 fprintf('fixed formation test: \t failed\n');
             else
                 fprintf('fixed formation test: \t successeful\n');
+            end
+            e = obj.obstaclePresence(view);
+            if(e == false)
+                fprintf('moving obstacle detection test: \t failed\n');
+            else
+                fprintf('moving obstacle detection test: \t successeful\n');
             end
         end
     end
