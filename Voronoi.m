@@ -35,6 +35,7 @@ classdef Voronoi < handle
             % discretize a circular space around the agent and define the
             % visibility set of the agent
             initVisibilitySet(obj);
+            initCells(obj);
             tmp_cell = obj.visibility_set;
             % for every point in the cell check if it's closer to agent
             for i = 1:obj.phi_n % for every angle
@@ -94,7 +95,7 @@ classdef Voronoi < handle
             if(isempty(obj.visibility_set))
                 error('Visibility set has to be computed before this operation');
             end
-            initCells(obj);
+            % initCells(obj);
             tmp_cell = obj.visibility_set;
             % for every point 
             for i = 1:obj.rho_n % for every angle

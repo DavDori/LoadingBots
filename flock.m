@@ -22,6 +22,16 @@ classdef flock < handle
         end
         
         
+        function p = getPositions(obj)
+            % return the position of every agent
+            n = length(obj.agents);
+            p = zeros(n, 2);
+            for i = 1:n
+                p(i,:) = obj.agents(i).position';
+            end
+        end
+        
+        
         function attachAll(obj)
             % attach all the agents on the board
             for a = obj.agents
@@ -167,11 +177,25 @@ classdef flock < handle
         end
         
         
-        function centroids = computeVoronoiCentroids(obj)
-            % compute the centroid of every agent voronoi cell
+        function centroids = computeVoronoiCentroids(obj, type)
+            % compute the centroid of every agent voronoi cell. It's
+            % possible to calculate the centroid relative to the formation
+            % or obstacle
             centroids = zeros(obj.n_agents, 2);
-            for i = 1:obj.n_agents
-                centroids(i,1:2) = obj.agents(i).Voronoi_cell.computeCentroid();
+            if(nargin < 2 )
+                for i = 1:obj.n_agents
+                    centroids(i,1:2) = obj.agents(i).getFormationCentroid();
+                end
+            elseif(strcmp(type, 'Formation'))
+                for i = 1:obj.n_agents
+                    centroids(i,1:2) = obj.agents(i).getFormationCentroid();
+                end
+            elseif(strcmp(type, 'Obstacle'))
+                for i = 1:obj.n_agents
+                    centroids(i,1:2) = obj.agents(i).getObstacleCentroid();
+                end
+            else
+                error(strcat('Error: wrong type: ', type, 'of voronoi cell selected'))
             end
         end
         
@@ -195,6 +219,16 @@ classdef flock < handle
         end
         
         
+        function applyMultiplePointsDensity(obj, points, sf)
+            % for every robot apply an exponential density function
+            % centered on a point which is given as input. 'sf' is the
+            % spread factor of the point
+            for i = 1:length(obj.agents)
+                obj.agents(i).applyVoronoiPointDensity(points(i,:), sf);
+            end
+        end
+        
+        
         function applySinglePointDensity(obj, point, sf)
             % for every robot apply an exponential density function
             % centered on a common point on the voronoi cell. 'sf' is the
@@ -204,13 +238,25 @@ classdef flock < handle
             end
         end
         
-        
-        function applyConstantDensity(obj)
+        function applyConstantDensity(obj, type)
             % for every robot apply a constant density at its Voronoi cell
             % density
-            for a = obj.agents
-                a.Voronoi_cell.addConstantDensity();
+            if(nargin < 2)
+                for a = obj.agents
+                    a.formation_VC.addConstantDensity();
+                end
+            elseif(strcmp(type, 'Formation'))
+                for a = obj.agents
+                    a.formation_VC.addConstantDensity();
+                end
+            elseif(strcmp(type, 'Obstacle'))
+                for a = obj.agents
+                    a.obstacle_VC.addConstantDensity();
+                end
+            else
+                error(strcat('Error: wrong type: ', type, 'of voronoi cell selected for constant density'))
             end
+            
         end
         
         
@@ -224,15 +270,27 @@ classdef flock < handle
         end
         
         
-        function moveToCentroids(obj, kp)
+        function moveToCentroids(obj, kp_formation, kp_obstacle)
             % move all the agents in direction of their centroids for a
             % sampling time.
-            for a = obj.agents
-                centroid = a.Voronoi_cell.centroid;
-                a.moveToCentroid(kp, centroid); 
+            
+            c_formation = kp_formation * obj.computeVoronoiCentroids('Formation');
+            if (nargin == 3)
+                c_obstacle  = kp_obstacle  * obj.computeVoronoiCentroids('Obstacle' );
+            else
+                c_obstacle = zeros(size(c_formation));
+            end
+            
+            
+            % can be done because both are in the relative ref frame 
+            c = c_obstacle + c_formation; 
+            
+            for i = 1:length(obj.agents)
+                centroid = c(i,:);
+                % set kp as 1 to keep the two kps
+                obj.agents(i).moveToCentroid(1, centroid);  
             end
         end
-                
         
         function spreadUnderCargo(obj, steps, offset, kd, obs)
             % distributed maximum coverage application
@@ -240,6 +298,7 @@ classdef flock < handle
             if nargin < 5
                 obs = [];
             end
+            
             for i = 1:steps
                 obj.meetNeighbours();
                 obj.computeVisibilitySets(obs);
@@ -357,12 +416,24 @@ classdef flock < handle
         end
         
         
-        function plotCentroids(obj)
+        function plotCentroids(obj, type)
             hold on
             for a = obj.agents
-                c = a.position + a.Voronoi_cell.centroid;
-                plot([a.position(1), c(1)],[a.position(2), c(2)],'r');
-                plot(c(1),c(2), 'xb');
+                if(nargin < 2)
+                    c = a.position + a.formation_VC.centroid;
+                    plot([a.position(1), c(1)],[a.position(2), c(2)],'-r');
+                    plot(c(1), c(2), 'ro');
+                elseif(strcmp(type, 'Formation'))
+                    c = a.position + a.formation_VC.centroid;
+                    plot([a.position(1), c(1)],[a.position(2), c(2)],'-r');
+                    plot(c(1), c(2), 'ro');
+                elseif(strcmp(type, 'Obstacle'))
+                    c = a.position + a.obstacle_VC.centroid;
+                    plot([a.position(1), c(1)],[a.position(2), c(2)],'-b');
+                    plot(c(1), c(2), 'bo');
+                else
+                    error(strcat('Error: wrong type: ', type, 'of voronoi cell in plot centroid'))
+                end
             end
             hold off
         end

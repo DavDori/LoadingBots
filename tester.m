@@ -81,12 +81,12 @@ classdef tester
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point, sf);
             
-            cell = robot_flock.agents(1).Voronoi_cell.cell_density;
+            cell = robot_flock.agents(1).formation_VC.cell_density;
             [~, index] = max(cell(:));
             [i, j] = ind2sub(size(cell), index);
             
-            rho = i * robot_flock.agents(1).Voronoi_cell.rho_res;
-            phi = j * robot_flock.agents(1).Voronoi_cell.phi_res;
+            rho = i * robot_flock.agents(1).formation_VC.rho_res;
+            phi = j * robot_flock.agents(1).formation_VC.phi_res;
             [dx, dy] = polar2cartesian(rho, phi);
             p = robot_flock.agents(1).position + [dx; dy];
             err_p = 10 * obj.max_error; % depends on the resolution of the cell
@@ -100,12 +100,12 @@ classdef tester
             robot_flock.computeVisibilitySets([]);
             robot_flock.computeVoronoiTessellation();
             robot_flock.applySinglePointDensity(point_2, sf);
-            cell = robot_flock.agents(1).Voronoi_cell.cell_density;
+            cell = robot_flock.agents(1).formation_VC.cell_density;
             [~, index] = max(cell(:));
             [i, j] = ind2sub(size(cell), index);
             
-            rho = i * robot_flock.agents(1).Voronoi_cell.rho_res;
-            phi = j * robot_flock.agents(1).Voronoi_cell.phi_res;
+            rho = i * robot_flock.agents(1).formation_VC.rho_res;
+            phi = j * robot_flock.agents(1).formation_VC.phi_res;
             
             phi_point = atan2(point_2(2) - center(2), point_2(1) - center(1));
             check_rho = rho >= param_test.range - obj.max_error;
@@ -113,41 +113,6 @@ classdef tester
             % hand, the values are regarded as from 0 to 2pi
             check_phi = abs(phi - phi_point) < obj.max_error * 10;
             flag_2 = check_rho && check_phi;
-        end
-        
-        function flag = moveToCentroid(obj)
-            % test the movement of the robot. Given a the position of the
-            % centroid and set the proportional parameter such that the
-            % robot reaches exactly the centroid after a simulation step.
-            
-            param_test.range = 1;          % [m] max observable range
-            param_test.comm_range = 1.2;     % [m] max connection distance
-            param_test.radius = 0.1;         % [m] hitbox of the agent
-            param_test.N_rho = 30;           % division of the radius for discretization
-            param_test.N_phi = 50;           % division of the angle for discretization
-            
-            center = [2 ; 2]; % [m]
-            center_mass = [0;0];        % [m]
-            dimensions = [1.5; 1];      % [m]
-            orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
-
-            agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
-            
-            robot_flock = flock(agents, cargo, obj.Ts, 0);
-            centroid = [0.2; 0.2]; % custom centroid position
-            % set centroid 
-            robot_flock.agents.Voronoi_cell.centroid = centroid;
-            % calculate the speed needed to reach the centroid in one step
-            kd = 1 / obj.Ts;
-            
-            robot_flock.moveToCentroids(kd);
-            
-            check_p = abs(robot_flock.agents.position - center - centroid) < [obj.max_error; obj.max_error];
-            
-            flag = check_p(1) == true && check_p(2) == true;
-            % true -> test passed
-            % false -> test failed
         end
         
         
@@ -231,9 +196,9 @@ classdef tester
             
             robot_flock.computeVoronoiTessellationCargo(offset);
             % get the points in the cell that are set to 1
-            p = sum(robot_flock.agents.Voronoi_cell.visibility_set, 'all');
+            p = sum(robot_flock.agents.formation_VC.visibility_set, 'all');
             % get the total amount of points
-            p_tot = robot_flock.agents.Voronoi_cell.rho_n * robot_flock.agents.Voronoi_cell.phi_n;
+            p_tot = robot_flock.agents.formation_VC.rho_n * robot_flock.agents.formation_VC.phi_n;
             
             flag = (abs(p / p_tot - 1/4) < obj.max_error);
             % true -> test passed
@@ -268,8 +233,8 @@ classdef tester
             robot_flock.applySinglePointDensity(point2, sf);
             robot_flock.computeVoronoiCentroids();
             % centroid expected on the robot location
-            error_x = robot_flock.agents.Voronoi_cell.centroid(1);
-            error_y = robot_flock.agents.Voronoi_cell.centroid(2);
+            error_x = robot_flock.agents.formation_VC.centroid(1);
+            error_y = robot_flock.agents.formation_VC.centroid(2);
             flag = abs(error_x) < obj.max_error && abs(error_y) < obj.max_error;
             
             if(view == true)
@@ -355,8 +320,8 @@ classdef tester
                 robot_flock.plotCentroids();
             end
             
-            flag_x = abs(agents(1).Voronoi_cell.centroid(1)) < obj.max_error;
-            flag_y = agents(1).Voronoi_cell.centroid(2) < agents(1).position(2);
+            flag_x = abs(agents(1).formation_VC.centroid(1)) < obj.max_error;
+            flag_y = agents(1).formation_VC.centroid(2) < agents(1).position(2);
             
             flag = flag_x && flag_y;
         end
@@ -408,17 +373,19 @@ classdef tester
                 robot_flock.applyWayPointDensity(0.2);
                 robot_flock.computeVoronoiCentroids();
                 % movement
-                robot_flock.moveToCentroids(1);
+                robot_flock.moveToCentroids(15);
                 reached = robot_flock.areWayPointsReached(e);
                 exit = all(reached);
                 n = n + 1;
             end
-            
+            if(n >= 30)
+                warning('max number of iteration reached');
+            end
             if(view == true)
                 figure()
                 hold on
                 grid on
-                robot_flock.plotVoronoiTessellationDetailed(1)
+                robot_flock.plotVoronoiTessellationDetailed(3)
                 robot_flock.plot();
                 robot_flock.plotCentroids();
             end
@@ -473,10 +440,10 @@ classdef tester
                 hold off
             end
             
-            c1 = robot_flock.agents(1, 1).Voronoi_cell.centroid();   
-            c2 = robot_flock.agents(1, 2).Voronoi_cell.centroid(); 
-            c3 = robot_flock.agents(1, 3).Voronoi_cell.centroid();
-            c4 = robot_flock.agents(1, 4).Voronoi_cell.centroid();
+            c1 = robot_flock.agents(1, 1).formation_VC.centroid();   
+            c2 = robot_flock.agents(1, 2).formation_VC.centroid(); 
+            c3 = robot_flock.agents(1, 3).formation_VC.centroid();
+            c4 = robot_flock.agents(1, 4).formation_VC.centroid();
             % c2 and c1 should be very similar due to the symmetric
             % positioning with respect to 003
             
@@ -513,37 +480,39 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 50;           % division of the angle for discretization
-            
+            ts = 0.1;
             agents = agent('001', center, param_test, cargo, map_cm);
-            robot_flock = flock(agents, cargo, obj.Ts, 0);
-            ball = Obstacle(0.2, [1;1.5], [6;0], obj.Ts);
+            robot_flock = flock(agents, cargo, ts, 0);
+            ball = Obstacle(0.2, [1;1.5], [6;0], ts);
             if(flag_plot == true)
                 figure();
             end
-            centroid = zeros(4,2);
+            c_f = zeros(4,2);
+            c_o = zeros(4,2);
             for i = 1:4
                 robot_flock.computeVisibilitySets(ball);
                 robot_flock.computeVoronoiTessellation();
-                robot_flock.applyConstantDensity();
-                robot_flock.computeVoronoiCentroids();
+                robot_flock.applyConstantDensity('Formation');
+                robot_flock.applyConstantDensity('Obstacle');
+                c_f(i,:) = robot_flock.computeVoronoiCentroids('Formation');
+                c_o(i,:) = robot_flock.computeVoronoiCentroids('Obstacle');
                 ball.move();
 
                 if(flag_plot == true)
                     subplot(1,4,i)
                     hold on
                     show(map_cm);
-                    robot_flock.plotVoronoiTessellationDetailed(1);
+                    robot_flock.plotVoronoiTessellationDetailed(3);
                     robot_flock.plot();
                     robot_flock.plotCentroids();
                     hold off
                     axis equal
                     grid on
                 end
-                centroid(i,:) = robot_flock.agents(1).Voronoi_cell.centroid;
             end
-            flag_y = all(centroid(:,2) <= 0);
-            flag_x = centroid(2,1) > 0 && centroid(3,1) < 0;
-            flag = flag_y && flag_x;
+            flag_y = all(c_f(:,2) <= 0);
+            flag_x = c_f(2,1) > 0 && c_f(3,1) < 0;
+            flag = flag_y && flag_x && all(all(c_f == c_o));
         end
         
         
@@ -568,15 +537,24 @@ classdef tester
             
             agents(1) = agent('001', [1.5; 2.1], param_test, cargo, map_cm);
             agents(2) = agent('002', [1.5; 0.9], param_test, cargo, map_cm);
-            robot_flock = flock(agents, cargo, obj.Ts, 0);
+            robot_flock = flock(agents, cargo, obj.Ts / 2, 0);
             
-            ball = Obstacle(0.2, [0; 0.9], [1.2; 0], obj.Ts);
+            ball = Obstacle(0.2, [0; 0.9], [1; 0], obj.Ts / 2);
             
+            steps = 50;
             if(flag_plot == true)
-                figure();
+                h = figure();
+                h.Visible = 'off';
+                axis tight manual
+                ax = gca;
+                ax.NextPlot = 'replaceChildren';
+                GIF(steps) = struct('cdata',[],'colormap',[]);
+                v = VideoWriter('obs_avoid.avi');
+                open(v);
+                
             end
-            steps = 24;
-            centroid = zeros(steps, 2);
+            
+            %centroid = zeros(steps, 2);
             for i = 1:steps
                 robot_flock.meetNeighbours(); % meat neighbours
                 robot_flock.sendScan(); % send scan
@@ -589,23 +567,26 @@ classdef tester
                 ball.move();
 
                 if(flag_plot == true)
-                    subplot(6,steps/6,i)
                     hold on
-                    robot_flock.plotVoronoiTessellation();
+                    
+                    xlim([0,4]);
+                    ylim([0,4]);
+                    show(map_cm);
+                    robot_flock.plotVoronoiTessellationDetailed(2);
                     robot_flock.plotCentroids();
                     ball.plot();
                     hold off
-                    axis equal
-                    grid on
+                    GIF(i) = getframe;
+                    clf(h);
+                    writeVideo(v, GIF(i));
                 end
-                centroid(i,:) = robot_flock.agents(2).Voronoi_cell.centroid;
+                %centroid(i,:) = robot_flock.agents(2).formation_VC.centroid;
             end
-            figure()
-            hold on
-            plot(centroid(:,1));
-            plot(centroid(:,2));
-            hold off
+            h.Visible = 'on';
+            movie(GIF,1,22);
+            close(v);
         end
+        
         
         function runAll(obj, view)
             e = obj.centroidOmogeneus();
@@ -625,12 +606,6 @@ classdef tester
                 fprintf('cargo limits test: \t failed\n');
             else
                 fprintf('cargo limits test: \t successeful\n');
-            end
-            e = obj.moveToCentroid();
-            if(e == false)
-                fprintf('move to centroid test: \t failed\n');
-            else
-                fprintf('move to centroid test: \t successeful\n');
             end
             [e1, e2] = obj.PointDensity();
             if(e1 == false)

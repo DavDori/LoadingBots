@@ -1,6 +1,6 @@
 clear all
 close all
-%clc
+clc
 
 %% SET UP
 st = [0;0]; % starting position offset (applied to agents and cargo)
@@ -30,8 +30,53 @@ agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5 - 1] + st, param,
 agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5 - 1] + st, param, cargo, map);
 agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2 - 1]   + st, param, cargo, map);
 
-Ts = 10e-2;
+Ts = 1e-2;
 sim_time = 2;
+
+robots = flock(agents, cargo, Ts, 0);
+ball = Obstacle(0.2, [0.5; 1], [0.5; 0], Ts);
+
+%% Spread under the cargo
+% robots.spreadUnderCargo(10, 0.2, 4);
+% kay_positions = robots.getPositions();
+% 
+% steps = 50;
+% h = figure('Position', [10 10 900 600]);
+% h.Visible = 'off';
+% axis tight manual
+% ax = gca;
+% ax.NextPlot = 'replaceChildren';
+% GIF(steps) = struct('cdata',[],'colormap',[]);
+% v = VideoWriter('group_obs_avoid.avi');
+% v.FrameRate = 5;
+% open(v);
+% 
+% %centroid = zeros(steps, 2);
+% for i = 1:steps
+%     robots.meetNeighbours();
+%     robots.sendScan(); % send scan, needed to connectivity maintenance
+%     robots.computeVisibilitySets(ball);
+%     robots.connectivityMaintenance();
+%     robots.computeVoronoiTessellation();
+%     robots.applyMultiplePointsDensity(kay_positions, 1);
+%     robots.computeVoronoiCentroids();
+%     robots.moveToCentroids(2);
+%     ball.move();
+%     
+%     hold on
+%     robots.plotVoronoiTessellationDetailed(4);
+%     robots.plotCentroids();
+%     robots.plot();
+%     ball.plot('Red');
+%     hold off
+%     
+%     GIF(i) = getframe(h);
+%     clf(h);
+%     writeVideo(v, GIF(i));
+% end
+% h.Visible = 'on';
+% movie(GIF,1,22);
+% close(v);
 
 %% init the flock of robots
 % formation_limit = 0.05;
@@ -106,5 +151,6 @@ fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
 
 Testing_unit = tester(map, Ts, 1e-2);
-Testing_unit.dodgeMovingObstacle(true);
-%Testing_unit.runAll(true);
+% Testing_unit.dodgeMovingObstacle(true);
+Testing_unit.obstaclePresence(true);
+% Testing_unit.runAll(false);

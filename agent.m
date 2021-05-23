@@ -18,8 +18,9 @@ classdef agent < handle
         
         msg_in % recived message
         Neighbours % positions and names of in range agents
-        Neighbours_scan
-        Voronoi_cell Voronoi
+        Neighbours_scan  % scanned area of the Neighbours
+        formation_VC Voronoi  % Voronoi cell used for formation
+        obstacle_VC  Voronoi  % Voronoi cell used for obstacle avoidance
         
         bounds double {mustBeNumeric} % ideal distances to keep from each neighbour
         way_point (2,1) double {mustBeNumeric} % position to reach
@@ -37,7 +38,8 @@ classdef agent < handle
             obj.attached = false; % starts as unattached
             obj.msg_in = [];
             obj.Neighbours = [];
-            obj.Voronoi_cell = Voronoi(param.N_rho, param.N_phi, param.range);
+            obj.formation_VC = Voronoi(param.N_rho, param.N_phi, param.range);
+            obj.obstacle_VC = Voronoi(param.N_rho, param.N_phi, param.range);
         end
               
         % METHODS: communication
@@ -174,7 +176,7 @@ classdef agent < handle
         function s = scan(obj, obs)
             % simulate a scan of the nearby area using a lidar sensor. A
             % moving obstacle object can be passed to increase complexity.
-            s = zeros(obj.Voronoi_cell.phi_n, 2);
+            s = zeros(obj.formation_VC.phi_n, 2);
             new_map = binaryOccupancyMap(obj.map); % copy
             if(isempty(obs) == false)
                 obs_map = binaryOccupancyMap(obj.map.XLocalLimits(2), ...
@@ -185,11 +187,11 @@ classdef agent < handle
                 syncWith(new_map, obs_map);
             end
             
-            for n = 1:obj.Voronoi_cell.phi_n
+            for n = 1:obj.formation_VC.phi_n
                 % the current orientation of the rover isn't available in
                 % the current version of the code, so it is set to 0°,
                 % always facing right. 
-                phi = n * obj.Voronoi_cell.phi_res;
+                phi = n * obj.formation_VC.phi_res;
                 pose = [obj.position', 0]; 
                 point = rayIntersection(new_map, pose, phi, obj.lidar_range);
                 
@@ -210,13 +212,14 @@ classdef agent < handle
             % compute the visibility set of the agent. Has to be computed
             % before the Voronoi cell calculation
             agent_scan = obj.scan(obs);
-            obj.Voronoi_cell.visibilitySet(agent_scan);
+            obj.obstacle_VC.visibilitySet(agent_scan);
+            obj.formation_VC.visibilitySet(agent_scan);
         end
         
         
         function computeCellCollisionAvoidance(obj)
             % compute cell avoiding collisions with agents
-            obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, 2 * obj.dimension);
+            obj.formation_VC.computeCell(obj.position, obj.Neighbours, 2 * obj.dimension);
         end
         
         
@@ -225,13 +228,13 @@ classdef agent < handle
             % between ideal position and each agent, considering a
             % relax_factor
             formation_lower_bound = obj.bounds - relax_factor;
-            obj.Voronoi_cell.computeCell(obj.position, obj.Neighbours, formation_lower_bound);
+            obj.formation_VC.computeCell(obj.position, obj.Neighbours, formation_lower_bound);
         end
         
         
         function applyVoronoiCargoLimits(obj, offset)
             % apply cargo limits on the cell tessellation
-            obj.Voronoi_cell.applyCargoLimits(obj.position, obj.cargo, offset);
+            obj.formation_VC.applyCargoLimits(obj.position, obj.cargo, offset);
         end
         
         
@@ -243,7 +246,7 @@ classdef agent < handle
                 upper_bounds = obj.lidar_range * ones(size(obj.Neighbours, 2));
             end
             % POSSIBLE FIX: iterate for every neighbour outside!!!
-            obj.Voronoi_cell.unionVisibilitySets(obj.position,...
+            obj.formation_VC.unionVisibilitySets(obj.position,...
                 upper_bounds, obj.Neighbours, obj.Neighbours_scan);
         end
         
@@ -264,7 +267,7 @@ classdef agent < handle
             fun_d = @(rho,phi) gain * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
                 * (rho * [cos(phi);sin(phi)] + ref));
             % apply density function to the actual voronoi cell
-            obj.Voronoi_cell.applyDensity(fun_d);
+            obj.formation_VC.applyDensity(fun_d);
         end
         
         
@@ -280,7 +283,7 @@ classdef agent < handle
             % density exponential expression
             fun_d = @(rho,phi) exp(-fun_dist(rho,phi) / sf);
             % apply density
-            obj.Voronoi_cell.applyDensity(fun_d);
+            obj.formation_VC.applyDensity(fun_d);
         end
         
         
@@ -299,6 +302,18 @@ classdef agent < handle
             delta_angle = cargo_final_position(3) - obj.cargo.orientation; 
             way_point = cargo_final_position(1:2) + rotationMatrix(delta_angle) * delta_position;
             obj.way_point = way_point;
+        end
+        
+        
+        function c = getFormationCentroid(obj)
+            % return the centroid relative to the formation cell
+            c = obj.formation_VC.computeCentroid(); 
+        end
+        
+        
+        function c = getObstacleCentroid(obj)
+            % return the centroid relative to the obstacle cell
+            c = obj.obstacle_VC.computeCentroid(); 
         end
         
         % METHODS: auxiliary    
@@ -357,17 +372,25 @@ classdef agent < handle
         end
         
         
-        function plotVoronoiCellDetailed(obj, step)
+        function plotVoronoiCellDetailed(obj, step, type)
             % plot a detailed version of the of the voronoi cell
             % considering the density of every point
-            obj.Voronoi_cell.plot(obj.position, step); 
+            if(nargin < 3)
+                obj.formation_VC.plot(obj.position, step);
+            elseif(strcmp(type, 'Formation'))
+                obj.formation_VC.plot(obj.position, step);
+            elseif(strcmp(type, 'Obstacle'))
+                obj.obstacle_VC.plot(obj.position, step);
+            else
+                error(strcat('Error: wrong type: ', type, 'of voronoi cell in plot'))
+            end
         end
         
         
         function print(obj)
             % print basic data of the agent
             fprintf('Agent %s info:\n', obj.name);
-            fprintf('position: %f, %f \t centroid position %f, %f \n', obj.position, obj.Voronoi_cell.centroid);
+            fprintf('position: %f, %f \t centroid position %f, %f \n', obj.position, obj.formation_VC.centroid);
             fprintf('way point %f, %f \n', obj.way_point);
         end
         
@@ -391,8 +414,8 @@ classdef agent < handle
         function set.Neighbours_scan(obj, scan)
             obj.Neighbours_scan = scan;
         end
-        function set.Voronoi_cell(obj, v_cell)
-            obj.Voronoi_cell = v_cell;
+        function set.formation_VC(obj, v_cell)
+            obj.formation_VC = v_cell;
         end
         function set.bounds(obj, pos)
             obj.bounds = pos; 
