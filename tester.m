@@ -516,6 +516,52 @@ classdef tester
         end
         
         
+        function flag = priorityP(~, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
+            map_cm = png2BOMap('map_test_2.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0;0];        % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi/2;         % [rad]
+            cargo = rect_load(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 1;          % [m] max observable range
+            param_test.comm_range = 3;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            ts = 0.1;
+            steps = 10;
+            Kp = 2;
+            agents = agent('001', center, param_test, cargo, map_cm);
+            robot_flock = flock(agents, cargo, ts, 0);
+            ball = Obstacle(0.2, [1;1], [2.5;0], ts);
+            p = zeros(steps, 1);
+            ball_x = zeros(steps, 1);
+            for i = 1:steps
+                robot_flock.computeVisibilitySets(ball);
+                robot_flock.applyConstantDensity('Obstacle');
+                robot_flock.computeVoronoiCentroids('Obstacle');
+                p(i) = robot_flock.priorityP(Kp);
+                ball_x(i) = ball.center(1);
+                ball.move();
+                
+            end
+            
+            if(flag_plot == true)
+                figure();
+                hold on
+                plot(1:steps, p);
+                plot(1:steps, ball_x);
+                grid on
+            end
+        end
+        
+        
         function dodgeMovingObstacle(obj, flag_plot)
             % a ball is thrown in the upper part of the visibility set in
             % the horiziontal direction. The Voronoi cell has to change

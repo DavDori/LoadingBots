@@ -152,5 +152,5 @@ fprintf('TESTING SECTION\n');
 
 Testing_unit = tester(map, Ts, 1e-2);
 % Testing_unit.dodgeMovingObstacle(true);
-Testing_unit.obstaclePresence(true);
+Testing_unit.priorityP(true);
 % Testing_unit.runAll(false);

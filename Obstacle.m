@@ -37,9 +37,9 @@ classdef Obstacle < handle
         end
         
         
-        function plot(obj)
+        function plot(obj, c)
             hold on
-            circle(obj.center(1), obj.center(2), obj.radius);
+            circle(obj.center(1), obj.center(2), obj.radius, 'Color', c);
             hold off
         end
         

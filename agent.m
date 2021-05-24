@@ -24,6 +24,8 @@ classdef agent < handle
         
         bounds double {mustBeNumeric} % ideal distances to keep from each neighbour
         way_point (2,1) double {mustBeNumeric} % position to reach
+        
+        priority % measure of how much an agent wants to detach from the structure
     end
     
     methods
@@ -40,6 +42,7 @@ classdef agent < handle
             obj.Neighbours = [];
             obj.formation_VC = Voronoi(param.N_rho, param.N_phi, param.range);
             obj.obstacle_VC = Voronoi(param.N_rho, param.N_phi, param.range);
+            obj.priority = 0;
         end
               
         % METHODS: communication
@@ -293,14 +296,15 @@ classdef agent < handle
             applyVoronoiPointDensity(obj, obj.way_point, sf);
         end
                 
-        % METHODS: path planning
+        % METHODS: path planning ------------------------------------------
         
         function way_point = computeWayPoint(obj, cargo_final_position)
             % compute the relative position that the agent should reach the
             % input pose has to be structured as [x; y; theta]
             delta_position = obj.position - obj.cargo.center;
             delta_angle = cargo_final_position(3) - obj.cargo.orientation; 
-            way_point = cargo_final_position(1:2) + rotationMatrix(delta_angle) * delta_position;
+            way_point = cargo_final_position(1:2) + ...
+                rotationMatrix(delta_angle) * delta_position;
             obj.way_point = way_point;
         end
         
@@ -316,7 +320,7 @@ classdef agent < handle
             c = obj.obstacle_VC.computeCentroid(); 
         end
         
-        % METHODS: auxiliary    
+        % METHODS: auxiliary ----------------------------------------------   
         
         function r = isInsideRectLoad(obj) 
             % check weather the agent is within the designated area
@@ -354,8 +358,28 @@ classdef agent < handle
             obj.bounds = bds;
         end
         
+        % PRIORITY METHODS ------------------------------------------------
         
-        % METHODS: representation
+        function [p,d] = computePriorityP(obj, Kp)
+            % compute proportional priority wrt. an obstacle proximity
+            c_o = obj.getObstacleCentroid();
+            d = sqrt(c_o' * c_o); 
+            p = d * Kp;
+            obj.priority = p;
+        end
+        
+        
+        function [p,d] = computePriorityPD(obj, Kp, Kd, last_d)
+            % compute proportional and derivative priority wrt. an obstacle 
+            % proximity
+            c_o = obj.getObstacleCentroid();
+            d = sqrt(c_o' * c_o);
+            p = d * Kp + (d - last_d) * obj.Ts * Kd;
+            obj.priority = p;
+        end
+        
+        
+        % METHODS: representation -----------------------------------------
         
         function plot(obj) 
             % represent the agent on a 2D plain in red if free to move, in 
@@ -390,12 +414,13 @@ classdef agent < handle
         function print(obj)
             % print basic data of the agent
             fprintf('Agent %s info:\n', obj.name);
-            fprintf('position: %f, %f \t centroid position %f, %f \n', obj.position, obj.formation_VC.centroid);
+            fprintf('position: %f, %f \t centroid position %f, %f \n', ...
+                obj.position, obj.formation_VC.centroid);
             fprintf('way point %f, %f \n', obj.way_point);
         end
         
         
-        % SETTERS
+        % SETTERS ---------------------------------------------------------
         function set.attached(obj, v)
             obj.attached = v;
         end

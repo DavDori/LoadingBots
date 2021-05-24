@@ -200,6 +200,8 @@ classdef flock < handle
         end
         
         
+        % METHODS: voronoi cell density -----------------------------------
+        
         function applyFarFromCenterMassDensity(obj)
             % for every robot apply the far from center of mass density on
             % the Voronoi cell
@@ -259,6 +261,7 @@ classdef flock < handle
             
         end
         
+        % MOTION PLANNING METHODS -----------------------------------------
         
         function setWayPoints(obj, dest)
             % given the destination of the cargo, compute the waypoints of
@@ -281,7 +284,6 @@ classdef flock < handle
                 c_obstacle = zeros(size(c_formation));
             end
             
-            
             % can be done because both are in the relative ref frame 
             c = c_obstacle + c_formation; 
             
@@ -291,6 +293,7 @@ classdef flock < handle
                 obj.agents(i).moveToCentroid(1, centroid);  
             end
         end
+        
         
         function spreadUnderCargo(obj, steps, offset, kd, obs)
             % distributed maximum coverage application
@@ -381,19 +384,27 @@ classdef flock < handle
             end
         end
         
-        % METHODS: representation
+        % METHODS: priority
         
-        function plot(obj)
-            % representation in a 2D plane of the agents and the load
-            hold on
-            axis equal
-            obj.cargo.plot('r')
-            for a = obj.agents
-                a.plot();
+        function p = priorityP(obj, Kp)
+            % compute the proportional priority for each robot 
+            p = zeros(size(obj.agents));
+            for i = 1:length(obj.agents)
+                [p(i,:), d] = obj.agents.computePriorityP(Kp);
             end
-            hold off
         end
         
+        
+        function [p,d] = priorityPD(obj, Kp, Kd, last_d)
+            % compute the proportional and derivative priority for each robot 
+            d = zeros(size(last_d));
+            p = zeros(size(obj.agents));
+            for i = 1:length(obj.agents)
+                [p(i,:), d(i,:)] = obj.agents.computePriorityP(Kp, Kd, last_d(i,:));
+            end
+        end
+        
+        % METHODS: representation   
         
         function plotVoronoiTessellation(obj)
             % plot the limit perimeter of the Voronoi cells of every robot
