@@ -48,11 +48,11 @@ classdef flock < handle
         end
         
         
-        function flag = checkBalance(obj)
+        function flag = checkBalance(obj, id_agents)
             % check if the load should be falling
             points = zeros([obj.n_agents, 2]);
             n = 0;
-            for i = 1:obj.n_agents
+            for i = id_agents
                 if(obj.agents(i).attached == true) % considers only attached agents
                     n = n + 1;
                     points(n,:) = obj.agents(i).position';
@@ -403,6 +403,37 @@ classdef flock < handle
                 [p(i,:), d(i,:)] = obj.agents.computePriorityP(Kp, Kd, last_d(i,:));
             end
         end
+        
+        
+        function mask = detachable(obj)
+            % check if the agents detachment is going to cause critical
+            % failure
+            mask = zeros(length(obj.agents), 1);
+            n = length(obj.agents);
+            for i = 1:n
+                mask(i) = checkBalance(obj, [1:i-1, i+1:n]);
+            end
+        end
+        
+        function id = priorityRankingP(obj, Kp)
+            % return the id of the agent with higher priority that can move
+            % using priority P
+            [p, ~] = obj.priorityP(Kp);
+            mask = obj.detachable();
+            p_to_move = p .* mask;
+            [~,id] = max(p_to_move);
+        end
+        
+        
+        function [id, new_d] = priorityRankingPD(obj, Kp, Kd, last_d)
+            % return the id of the agent with higher priority that can move
+            % using priority PD
+            [p, new_d] = obj.priorityPD(Kp, Kd, last_d);
+            mask = obj.detachable();
+            p_to_move = p .* mask;
+            [~,id] = max(p_to_move);
+        end
+        
         
         % METHODS: representation   
         
