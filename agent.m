@@ -360,7 +360,7 @@ classdef agent < handle
         
         % PRIORITY METHODS ------------------------------------------------
         
-        function [p,d] = computePriorityP(obj, Kp)
+        function [p, d] = computePriorityP(obj, Kp)
             % compute proportional priority wrt. an obstacle proximity
             c_o = obj.getObstacleCentroid();
             d = sqrt(c_o' * c_o); 
@@ -374,7 +374,7 @@ classdef agent < handle
             % proximity
             c_o = obj.getObstacleCentroid();
             d = sqrt(c_o' * c_o);
-            p = d * Kp + (d - last_d) * obj.Ts * Kd;
+            p = d * Kp + (d - last_d) / obj.Ts * Kd;
             obj.priority = p;
         end
         

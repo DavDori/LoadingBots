@@ -50,7 +50,7 @@ classdef flock < handle
         
         function flag = checkBalance(obj, id_agents)
             % check if the load should be falling
-            points = zeros([obj.n_agents, 2]);
+            points = zeros([length(id_agents), 2]);
             n = 0;
             for i = id_agents
                 if(obj.agents(i).attached == true) % considers only attached agents
@@ -388,19 +388,22 @@ classdef flock < handle
         
         function p = priorityP(obj, Kp)
             % compute the proportional priority for each robot 
-            p = zeros(size(obj.agents));
+            p = zeros(length(obj.agents),1);
             for i = 1:length(obj.agents)
-                [p(i,:), d] = obj.agents.computePriorityP(Kp);
+                [p(i), ~] = obj.agents(i).computePriorityP(Kp);
             end
         end
         
         
         function [p,d] = priorityPD(obj, Kp, Kd, last_d)
-            % compute the proportional and derivative priority for each robot 
+            % compute the proportional and derivative priority for each robot.
+            % to compute the derivative term, the last distance readings
+            % for each agent is needed 
+            
             d = zeros(size(last_d));
-            p = zeros(size(obj.agents));
-            for i = 1:length(obj.agents)
-                [p(i,:), d(i,:)] = obj.agents.computePriorityP(Kp, Kd, last_d(i,:));
+            p = zeros(obj.n_agents, 1);
+            for i = 1:obj.n_agents
+                [p(i), d(i)] = obj.agents(i).computePriorityPD(Kp, Kd, last_d(i));
             end
         end
         
@@ -418,10 +421,15 @@ classdef flock < handle
         function id = priorityRankingP(obj, Kp)
             % return the id of the agent with higher priority that can move
             % using priority P
-            [p, ~] = obj.priorityP(Kp);
+            p = obj.priorityP(Kp);
+            p = p + 0.01; % small perturbation
             mask = obj.detachable();
             p_to_move = p .* mask;
-            [~,id] = max(p_to_move);
+            if (sum(abs(p_to_move)) == 0)
+                id = [];
+            else
+                [~,id] = max(p_to_move);
+            end
         end
         
         
@@ -436,6 +444,17 @@ classdef flock < handle
         
         
         % METHODS: representation   
+        
+        function plot(obj)
+            % representation in a 2D plane of the agents and the load
+            hold on
+            axis equal
+            obj.cargo.plot('r')
+            for a = obj.agents
+                a.plot();
+            end
+            hold off
+        end
         
         function plotVoronoiTessellation(obj)
             % plot the limit perimeter of the Voronoi cells of every robot
@@ -453,6 +472,17 @@ classdef flock < handle
             hold on
             for a = obj.agents
                 a.plotVoronoiCellDetailed(step); 
+            end
+            hold off
+        end
+        
+        
+        function plotVTObstacle(obj, step)
+            % plot the Voronoi cells of every robot considering every point
+            % of the cell
+            hold on
+            for a = obj.agents
+                a.plotVoronoiCellDetailed(step, 'Obstacle'); 
             end
             hold off
         end
