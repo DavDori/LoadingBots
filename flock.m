@@ -32,10 +32,24 @@ classdef flock < handle
         end
         
         
-        function attachAll(obj)
-            % attach all the agents on the board
-            for a = obj.agents
-                a.attach(); 
+        function attach(obj, set)
+            % attach the selected agents on the board
+            if(nargin < 2)
+                set = 1:obj.n_agents;
+            end
+            for i = set
+                obj.agents(i).attach(); 
+            end
+        end
+        
+        
+        function detach(obj, set)
+            % detach the selected agents on the board
+            if(nargin < 2)
+                set = 1:obj.n_agents;
+            end
+            for i = set
+                obj.agents(i).detach(); 
             end
         end
         
@@ -414,9 +428,42 @@ classdef flock < handle
             mask = zeros(length(obj.agents), 1);
             n = length(obj.agents);
             for i = 1:n
-                mask(i) = checkBalance(obj, [1:i-1, i+1:n]);
+                % check only attached agents
+                if(obj.agents(i).attached == true)
+                    mask(i) = checkBalance(obj, [1:i-1, i+1:n]);
+                end
             end
         end
+        
+        
+        function ids = attachable(obj, type, param)
+            % check if the agents have escaped a problematic situation and
+            % can attach to the cargo again. 
+            % param is a struct with priority parameters.
+            
+            ids = zeros(length(obj.agents), 1);
+            n = length(obj.agents);
+            index = 0;
+            for i = 1:n
+                % check only attached agents
+                if(obj.agents(i).attached == false)
+                    if(strcmp(type, 'PD') == true)
+                        prio = obj.agents(i).computePriorityP(param.kp, param.kd, param.last_d);
+                    elseif(strcmp(type, 'P') == true)
+                        prio = obj.agents(i).computePriorityP(param.kp);
+                    else
+                        error('wrong type of priority selected');
+                    end
+                    
+                    if(prio < param.th) % attach the agent
+                        index = index + 1;
+                        ids(index) = i;
+                    end
+                end
+            end
+            ids = ids(1:index);
+        end
+        
         
         function id = priorityRankingP(obj, Kp)
             % return the id of the agent with higher priority that can move
