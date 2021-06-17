@@ -51,7 +51,7 @@ agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5 - 1] + st, param,
 agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5 - 1] + st, param, cargo, map);
 agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5 - 1] + st, param, cargo, map);
 agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2 - 1]   + st, param, cargo, map);
-
+agents(6) = agent('Anakin',[map.XWorldLimits(2) / 2 + 0.5; 2 - 1]   + st, param, cargo, map);
 
 robots = flock(agents, cargo, Ts, 0);
 
@@ -60,9 +60,8 @@ ball = Obstacle(ball_r, ball_starting_point, ball_v, Ts);
 
 %% spread under the cargo
 steps = 80;
-
-robots.spreadUnderCargo(30, 0.2, 1);
-%robots.attach();
+robots.spreadUnderCargo(15, 0.2, 1);
+robots.attach();
 last_d = zeros(robots.n_agents, 1);
 
 h = figure();
@@ -91,13 +90,9 @@ for i = 1:steps
     robots.applyConstantDensity('Obstacle');
     robots.applyConstantDensity('Formation');
     
-    id = robots.attachable('P', param);
-    
+    id_a = robots.attachable('P', param);
+    id_d = robots.detachable();
     robots.computeVoronoiCentroids();
-    robots.moveToCentroids(kp_formation, kp_obstacle)
-    ball.move();
-    
-    
     
     hold on         
     xlim([0,map_width]);
@@ -126,7 +121,8 @@ for i = 1:steps
 %     GIF(i) = getframe(gcf);
 %     clf(h);
 %     writeVideo(v, GIF(i));
-
+    robots.moveToCentroids(kp_formation, kp_obstacle)
+    ball.move();
 end
 % h.Visible = 'on';
 % close(v);

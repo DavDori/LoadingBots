@@ -255,10 +255,13 @@ classdef Voronoi < handle
             fun_m = @(rho,phi) 1;
             
             mass = computeCellMass(obj, fun_m);
-            
-            x = computeCellMass(obj, fun_x) / mass;
-            y = computeCellMass(obj, fun_y) / mass;
-            c = [x;y]; % c corresponds with the center of mass of the cell
+            if(mass == 0)
+                c = [0;0];
+            else
+                x = computeCellMass(obj, fun_x) / mass;
+                y = computeCellMass(obj, fun_y) / mass;
+                c = [x;y]; % c corresponds with the center of mass of the cell
+            end
             obj.centroid = c;
         end
         

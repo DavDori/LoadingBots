@@ -422,17 +422,50 @@ classdef flock < handle
         end
         
         
-        function mask = detachable(obj)
-            % check if the agents detachment is going to cause critical
-            % failure
-            mask = zeros(length(obj.agents), 1);
-            n = length(obj.agents);
-            for i = 1:n
-                % check only attached agents
+        function ids = getAttached(obj)
+            % return the ids of all attached agents
+            ids = zeros(obj.n_agents, 1);
+            index = 0;
+            for i = 1:obj.n_agents
                 if(obj.agents(i).attached == true)
-                    mask(i) = checkBalance(obj, [1:i-1, i+1:n]);
+                    index = index + 1;
+                    ids(index) = i;
                 end
             end
+            ids = ids(1:index);
+        end
+        
+        function ids = getDetached(obj)
+            % return the ids of all detahced agents
+            ids = zeros(obj.n_agents, 1);
+            index = 0;
+            for i = 1:obj.n_agents
+                if(obj.agents(i).attached == false)
+                    index = index + 1;
+                    ids(index) = i;
+                end
+            end
+            ids = ids(1:index);
+        end
+        
+        
+        function ids = detachable(obj)
+            % check if the agents detachment is going to cause critical
+            % failure
+            
+            attached_ids = obj.getAttached()';
+            ids = zeros(length(attached_ids), 1);
+            index = 0;
+            for i = attached_ids
+                % don't consider itsself in the balance
+                mates = attached_ids(attached_ids ~= i);
+                
+                if(checkBalance(obj, mates) == true)
+                    index = index + 1;
+                    ids(index) = i;
+                end
+            end
+            ids = ids(1:index);
         end
         
         
@@ -441,24 +474,22 @@ classdef flock < handle
             % can attach to the cargo again. 
             % param is a struct with priority parameters.
             
-            ids = zeros(length(obj.agents), 1);
-            n = length(obj.agents);
+            detached_ids = obj.getDetached()';
+            ids = zeros(length(detached_ids), 1);
             index = 0;
-            for i = 1:n
-                % check only attached agents
-                if(obj.agents(i).attached == false)
-                    if(strcmp(type, 'PD') == true)
-                        prio = obj.agents(i).computePriorityP(param.kp, param.kd, param.last_d);
-                    elseif(strcmp(type, 'P') == true)
-                        prio = obj.agents(i).computePriorityP(param.kp);
-                    else
-                        error('wrong type of priority selected');
-                    end
-                    
-                    if(prio < param.th) % attach the agent
-                        index = index + 1;
-                        ids(index) = i;
-                    end
+            % check only detached agents
+            for i = detached_ids
+                if(strcmp(type, 'PD') == true)
+                    prio = obj.agents(i).computePriorityP(param.kp, param.kd, param.last_d);
+                elseif(strcmp(type, 'P') == true)
+                    prio = obj.agents(i).computePriorityP(param.kp);
+                else
+                    error('wrong type of priority selected');
+                end
+
+                if(prio < param.th) % attach the agent
+                    index = index + 1;
+                    ids(index) = i;
                 end
             end
             ids = ids(1:index);

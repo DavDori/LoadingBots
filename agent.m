@@ -385,13 +385,14 @@ classdef agent < handle
             % represent the agent on a 2D plain in red if free to move, in 
             % blue if attached
             hold on
+            offset = 0.1;
             if(obj.attached == true)
                 plot(obj.position(1), obj.position(2), 'ob')
             else
                 plot(obj.position(1), obj.position(2), 'or')
             end
             circle(obj.position(1), obj.position(2), obj.dimension);
-            %circle(obj.position(1), obj.position(2), obj.lidar_range);
+            text(obj.position(1) + offset, obj.position(2), obj.name);
             hold off
         end
         
