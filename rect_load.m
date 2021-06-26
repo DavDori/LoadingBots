@@ -62,18 +62,22 @@ classdef rect_load < handle
             n = size(contact_points,1); % number of contact points
             center_mass_absolute = (obj.center + rotationMatrix(obj.orientation) * obj.center_mass)';
             flag = false;
-            if(n > 2) 
-                for i = 1:n
-                    for j = 1:n
-                        for k = 1:n
-                            if(k ~= i && k ~= j && j ~= i)
-                                P1 = contact_points(i,:);
-                                P2 = contact_points(j,:);
-                                P3 = contact_points(k,:);
-                                flag = inTriangle(center_mass_absolute,P1,P2,P3);
-                                if(flag == true)
-                                    break;
-                                end
+            if(n > 2)
+                set_i = 1:n;
+                for i = set_i
+                    set_j = set_i(set_i ~= i); % all exept i
+                    for j = set_j 
+                        set_k = set_j(set_j ~= j); % all exept i and j
+                        for k = set_k
+                            P1 = contact_points(i,:);
+                            P2 = contact_points(j,:);
+                            P3 = contact_points(k,:);
+                            flag = inTriangle(center_mass_absolute,P1,P2,P3);
+                            if(flag == true)
+                                % if for at least one triangle the
+                                % baricenter is inside, the cargo is in
+                                % balance
+                                return;
                             end
                         end
                     end
