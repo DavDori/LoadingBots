@@ -196,7 +196,22 @@ classdef flock < handle
         end
         
         
-        function connectivityMaintenance(obj, relax_factor, type)
+        function connectivityMaintenanceFF(obj, relax_factor, type)
+            % modify the voronoi cells of every agent corresponding to the specified type,
+            % to allow connectivity maintenance for fixed formation
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+
+            for i = ids
+                obj.agents(i).applyConnectivityMaintenance(relax_factor);
+            end
+        end
+        
+        
+        function connectivityMaintenance(obj, type)
             % modify the voronoi cells of every agent corresponding to the specified type,
             % to allow connectivity maintenance
             if(nargin < 3)
@@ -204,15 +219,9 @@ classdef flock < handle
             else
                 ids = obj.agentSelector(type);
             end
-            
-            if(nargin > 1)
-                for i = ids
-                    obj.agents(i).applyConnectivityMaintenance(relax_factor);
-                end
-            else
-                for i = ids
-                    obj.agents(i).applyConnectivityMaintenance();
-                end
+
+            for i = ids
+                obj.agents(i).applyConnectivityMaintenance();
             end
         end
         
@@ -349,10 +358,14 @@ classdef flock < handle
         end
         
         
-        function moveToCentroids(obj, kp_formation, kp_obstacle)
+        function moveToCentroids(obj, kp_formation, kp_obstacle, type)
             % move all the agents in direction of their centroids for a
             % sampling time.
-            
+            if(nargin < 4)
+                type = 'All';
+            end
+            ids = obj.agentSelector(type);
+            global test;
             c_formation = kp_formation * obj.computeVoronoiCentroids('Formation');
             if (nargin == 3)
                 c_obstacle  = kp_obstacle  * obj.computeVoronoiCentroids('Obstacle' );
@@ -363,7 +376,7 @@ classdef flock < handle
             % can be done because both are in the relative ref frame 
             c = c_obstacle + c_formation; 
             
-            for i = 1:length(obj.agents)
+            for i = ids
                 centroid = c(i,:);
                 % set kp as 1 to keep the two kps
                 obj.agents(i).moveToCentroid(1, centroid);  
@@ -457,6 +470,22 @@ classdef flock < handle
             end
         end
               
+        
+        function pos = getAgentsPositions(obj, type)
+            % build a nx2 matrix with the agents positions
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            pos = zeros(length(ids),2);
+            n = 0;
+            for i = ids
+                n = n + 1;
+                pos(n,:) = obj.agents(i).position';
+            end
+        end
+        
         
         function reached = areWayPointsReached(obj, error, type)
             % for every agent if they have reached their waypoint
@@ -572,17 +601,18 @@ classdef flock < handle
         end
         
         
-        function id = priorityRankingP(obj, Kp)
+        function [id,val] = priorityRankingP(obj, Kp)
             % return the id of the agent with higher priority that can move
             % using priority P
             p = obj.priorityP(Kp);
             p = p + 0.01; % small perturbation
-            mask = obj.detachable();
-            p_to_move = p .* mask;
+            ids_d = obj.detachable();
+            p_to_move = p(ids_d); % take only agents that can detach
             if (sum(abs(p_to_move)) == 0)
                 id = [];
+                val = [];
             else
-                [~,id] = max(p_to_move);
+                [val,id] = max(p_to_move);
             end
         end
         

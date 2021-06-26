@@ -31,17 +31,22 @@ ball_r = 0.2; % [m]
 ball_speed = 1;
 ball_direction = deg2rad(10);
 
-Ts = 5e-2;
+Ts = 1e-1;
 sim_time = 2;
 
-kp_formation = 2;
+kp_formation = 1;
 kp_obstacle = 2;
 offset_cargo = 0.1;
 
 bound = 0.05; % for fixed formation
 
-param.kp = 1;
-param.th = 0.1;
+% attaching 
+param_at.kp = 1;
+param_at.th = 0.1;
+
+% detaching
+Kp_d = 1;
+th_d = 0.18;
 %% objects initialization
 
 cargo = rect_load(st + center, center_mass, orientation, dimensions);
@@ -57,72 +62,89 @@ robots = flock(agents, cargo, Ts, 0);
 
 ball_v = [cos(ball_direction); sin(ball_direction)] * ball_speed;
 ball = Obstacle(ball_r, ball_starting_point, ball_v, Ts);
+global test;
 
 %% spread under the cargo
+test = 41;
 steps = 40;
 robots.spreadUnderCargo(15, 0.2, 1);
 robots.attach();
 last_d = zeros(robots.n_agents, 1);
 
+%% Starting situation
+figure()
+hold on         
+xlim([0,map_width]);
+ylim([0,map_height]);
+axis equal
+grid on
+show(map);
+%robots.plotVoronoiTessellationDetailed(1);
+robots.plot();
+robots.plotCentroids();
+ball.plot();
+hold off
+    
+%% P algorithm 
 h = figure();
-% h.Visible = 'off';
-% axis tight manual
-% ax = gca;
-% ax.NextPlot = 'replaceChildren';
-% GIF(steps) = struct('cdata',[],'colormap',[]);
-% v = VideoWriter('no_constraints.avi');
-% v.FrameRate = 10;
-% open(v);
+h.Visible = 'off';
+axis tight manual
+ax = gca;
+ax.NextPlot = 'replaceChildren';
+GIF(steps) = struct('cdata',[],'colormap',[]);
+v = VideoWriter('sim_P.avi');
+v.FrameRate = 10;
+open(v);
+
+% set positions to hold
+
+hold_positions = robots.getAgentsPositions('All');
+
 
 for i = 1:steps
     
-    
     robots.meetNeighbours();
-    robots.sendScan(); % send scan
+    robots.sendScan(ball); 
     
-    robots.fixFormation();
+    robots.fixFormation('Attached');
             
     robots.computeVisibilitySets(ball);
-    robots.connectivityMaintenance(bound);
-    robots.computeVoronoiTessellationFF(bound);
+    %robots.connectivityMaintenanceFF(bound, 'Attached');
+    %robots.connectivityMaintenance('Detached');
+    
+    %robots.computeVoronoiTessellationFF(bound, 'Attached');
     robots.computeVoronoiTessellationCargo(offset_cargo);
     
     robots.applyConstantDensity('Obstacle');
-    robots.applyConstantDensity('Formation');
+    robots.applyMultiplePointsDensity(hold_positions, 0.2, 'All');
     
-    id_a = robots.attachable('P', param);
-    id_d = robots.detachable();
-    robots.computeVoronoiCentroids();
+    id_a = robots.attachable('P', param_at);
+    [id_d, val_d] = robots.priorityRankingP(Kp_d);
+    if(isempty(id_d) == false) % there is at least a robot to deattach
+        if(val_d > th_d) % agent wants to move
+            robots.detach(id_d);
+        end
+    end
     
+    % video setup
     hold on         
     xlim([0,map_width]);
     ylim([0,map_height]);
     axis equal
     grid on
     show(map);
-    %robots.plotVoronoiTessellationDetailed(1);
+    robots.plotVoronoiTessellationDetailed(1);
     robots.plot();
     robots.plotCentroids();
     ball.plot();
-    
-    % video setup
-%     hold on         
-%     xlim([0,map_width]);
-%     ylim([0,map_height]);
-%     axis equal
-%     grid on
-%     show(map);
-%     %robots.plotVoronoiTessellationDetailed(1);
-%     robots.plot();
-%     robots.plotCentroids();
-%     ball.plot();
-%     hold off
-    
-%     GIF(i) = getframe(gcf);
-%     clf(h);
-%     writeVideo(v, GIF(i));
-    robots.moveToCentroids(kp_formation, kp_obstacle)
+    hold off
+%     
+    GIF(i) = getframe(gcf);
+    clf(h);
+    writeVideo(v, GIF(i));
+    robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
     ball.move();
+    robots.print();
 end
-% h.Visible = 'on';
-% close(v);
+h.Visible = 'on';
+close(v);
