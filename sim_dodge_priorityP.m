@@ -59,7 +59,7 @@ ball_v = [cos(ball_direction); sin(ball_direction)] * ball_speed;
 ball = Obstacle(ball_r, ball_starting_point, ball_v, Ts);
 
 %% spread under the cargo
-steps = 80;
+steps = 40;
 robots.spreadUnderCargo(15, 0.2, 1);
 robots.attach();
 last_d = zeros(robots.n_agents, 1);

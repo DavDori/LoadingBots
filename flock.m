@@ -154,12 +154,32 @@ classdef flock < handle
         end
         
         
-        function computeVoronoiTessellationFF(obj, relax_factor)
+        function ids = agentSelector(obj, type)
+            % selects agents given a type identifier 
+            if(strcmp(type, 'Attached') == true)
+                ids = getAttached(obj);
+            elseif(strcmp(type, 'Detached') == true)
+                ids = getDetached(obj);
+            elseif(strcmp(type, 'All') == true)
+                ids = 1:obj.n_agents;
+            else
+                error('wrong type of agent selected! Specify Attached, All or Detached as type')
+            end
+        end
+        
+        
+        function computeVoronoiTessellationFF(obj, relax_factor, type)
             % compute the Voronoi tessellation of a discretization of the
             % nearby area for every agent in the flock. Moreover it takes 
-            % into account formation facor
-            for a = obj.agents
-                a.computeCellFormation(relax_factor); 
+            % into account formation facor. By setting type to attached or
+            % detached, it is possible to select different agents
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            for i = ids
+                obj.agents(i).computeCellFormation(relax_factor); 
             end
         end
         
@@ -176,16 +196,22 @@ classdef flock < handle
         end
         
         
-        function connectivityMaintenance(obj, relax_factor)
-            % modify the voronoi cells of every agent to allow connectivity
-            % maintenance
+        function connectivityMaintenance(obj, relax_factor, type)
+            % modify the voronoi cells of every agent corresponding to the specified type,
+            % to allow connectivity maintenance
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
             if(nargin > 1)
-                for a = obj.agents
-                    a.applyConnectivityMaintenance(relax_factor);
+                for i = ids
+                    obj.agents(i).applyConnectivityMaintenance(relax_factor);
                 end
             else
-                for a = obj.agents
-                    a.applyConnectivityMaintenance();
+                for i = ids
+                    obj.agents(i).applyConnectivityMaintenance();
                 end
             end
         end
@@ -196,7 +222,7 @@ classdef flock < handle
             % possible to calculate the centroid relative to the formation
             % or obstacle
             centroids = zeros(obj.n_agents, 2);
-            if(nargin < 2 )
+            if(nargin < 2)
                 for i = 1:obj.n_agents
                     centroids(i,1:2) = obj.agents(i).getFormationCentroid();
                 end
@@ -216,71 +242,107 @@ classdef flock < handle
         
         % METHODS: voronoi cell density -----------------------------------
         
-        function applyFarFromCenterMassDensity(obj)
-            % for every robot apply the far from center of mass density on
-            % the Voronoi cell
-            for a = obj.agents
-                a.applyVoronoiFarFromCargoDensity();
+        function applyFarFromCenterMassDensity(obj, type)
+            % for every robot of specified type, apply the far from center 
+            % of mass density on the Voronoi cell
+            if(nargin < 2)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
+                obj.agents(i).applyVoronoiFarFromCargoDensity();
             end
         end
         
         
-        function applyWayPointDensity(obj, sf)
+        function applyWayPointDensity(obj, sf, type)
             % for every robot apply an exponential density function
             % centered on its way point on the voronoi cell. 'sf' is the
             % spread factor of the points
-            for a = obj.agents
-                a.applyVoronoiWayPointDensity(sf);
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
+                obj.agents(i).applyVoronoiWayPointDensity(sf);
             end
         end
         
         
-        function applyMultiplePointsDensity(obj, points, sf)
+        function applyMultiplePointsDensity(obj, points, sf, type)
             % for every robot apply an exponential density function
             % centered on a point which is given as input. 'sf' is the
             % spread factor of the point
-            for i = 1:length(obj.agents)
+            if(nargin < 4)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
                 obj.agents(i).applyVoronoiPointDensity(points(i,:), sf);
             end
         end
         
         
-        function applySinglePointDensity(obj, point, sf)
+        function applySinglePointDensity(obj, point, sf, type)
             % for every robot apply an exponential density function
             % centered on a common point on the voronoi cell. 'sf' is the
             % spread factor of the point
-            for a = obj.agents
-                a.applyVoronoiPointDensity(point, sf);
+            if(nargin < 4)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
+                obj.agents(i).applyVoronoiPointDensity(point, sf);
             end
         end
         
-        function applyConstantDensity(obj, type)
+        function applyConstantDensity(obj, type_cell, type_agents)
             % for every robot apply a constant density at its Voronoi cell
             % density
-            if(nargin < 2)
-                for a = obj.agents
-                    a.formation_VC.addConstantDensity();
-                end
-            elseif(strcmp(type, 'Formation'))
-                for a = obj.agents
-                    a.formation_VC.addConstantDensity();
-                end
-            elseif(strcmp(type, 'Obstacle'))
-                for a = obj.agents
-                    a.obstacle_VC.addConstantDensity();
-                end
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
             else
-                error(strcat('Error: wrong type: ', type, 'of voronoi cell selected for constant density'))
+                ids = obj.agentSelector(type_agents);
             end
             
+            if(nargin < 2)
+                for i = ids
+                    obj.agents(i).formation_VC.addConstantDensity();
+                end
+            elseif(strcmp(type_cell, 'Formation'))
+                for i = ids
+                    obj.agents(i).formation_VC.addConstantDensity();
+                end
+            elseif(strcmp(type_cell, 'Obstacle'))
+                for i = ids
+                    obj.agents(i).obstacle_VC.addConstantDensity();
+                end
+            else
+                error(strcat('Error: wrong type: ', type_cell, 'of voronoi cell selected for constant density'))
+            end
         end
+        
         
         % MOTION PLANNING METHODS -----------------------------------------
         
-        function setWayPoints(obj, dest)
+        function setWayPoints(obj, dest, type)
             % given the destination of the cargo, compute the waypoints of
             % each agent
-            for i = 1:obj.n_agents
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
                 % calculate the destination for each agent
                 obj.agents(i).computeWayPoint(dest');
             end
@@ -377,24 +439,38 @@ classdef flock < handle
         end
         
         
-        function fixFormation(obj)
+        function fixFormation(obj, type)
             % should be computed after the flock has spread under the
             % cargo. It sets the bound to keep to the robots
-            for a = obj.agents
-                if(a.attached == false)
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
+                if(obj.agents(i).attached == false)
                     % if the agent is not attached, a warning is thrown
-                    fprintf('WARNING: %s is not attached \n', a.name); 
+                    fprintf('WARNING: %s is not attached \n', obj.agents(i).name); 
                 end
-                a.fixBounds();
+                obj.agents(i).fixBounds();
             end
         end
               
         
-        function reached = areWayPointsReached(obj, error)
+        function reached = areWayPointsReached(obj, error, type)
             % for every agent if they have reached their waypoint
-            reached = false(obj.n_agents, 1); 
-            for i = 1:obj.n_agents
-                reached(i) = obj.agents(i).isWayPointReached(error);
+            if(nargin < 3)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            reached = false(length(ids), 1); 
+            n = 0;
+            for i = ids
+                n = n + 1;
+                reached(n) = obj.agents(i).isWayPointReached(error);
             end
         end
         
@@ -424,7 +500,7 @@ classdef flock < handle
         
         function ids = getAttached(obj)
             % return the ids of all attached agents
-            ids = zeros(obj.n_agents, 1);
+            ids = zeros(1,obj.n_agents);
             index = 0;
             for i = 1:obj.n_agents
                 if(obj.agents(i).attached == true)
@@ -437,7 +513,7 @@ classdef flock < handle
         
         function ids = getDetached(obj)
             % return the ids of all detahced agents
-            ids = zeros(obj.n_agents, 1);
+            ids = zeros(1, obj.n_agents);
             index = 0;
             for i = 1:obj.n_agents
                 if(obj.agents(i).attached == false)
@@ -453,7 +529,7 @@ classdef flock < handle
             % check if the agents detachment is going to cause critical
             % failure
             
-            attached_ids = obj.getAttached()';
+            attached_ids = obj.getAttached();
             ids = zeros(length(attached_ids), 1);
             index = 0;
             for i = attached_ids
@@ -474,7 +550,7 @@ classdef flock < handle
             % can attach to the cargo again. 
             % param is a struct with priority parameters.
             
-            detached_ids = obj.getDetached()';
+            detached_ids = obj.getDetached();
             ids = zeros(length(detached_ids), 1);
             index = 0;
             % check only detached agents
