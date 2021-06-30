@@ -171,18 +171,22 @@ classdef flock < handle
         end
         
         
-        function computeVoronoiTessellationFF(obj, relax_factor, type)
+        function computeVoronoiTessellationFF(obj, relax_factor, type_AA, type_NB)
             % compute the Voronoi tessellation of a discretization of the
             % nearby area for every agent in the flock. Moreover it takes 
             % into account formation facor. By setting type to attached or
-            % detached, it is possible to select different agents
+            % detached, it is possible to select different agents to act
+            % with 'type_AA' and the neighbours to consider with 'type_NB'
             if(nargin < 3)
-                ids = obj.agentSelector('All');
-            else
-                ids = obj.agentSelector(type);
+                type_AA = 'All';
             end
+            if(nargin < 4)
+                type_NB = 'All';
+            end
+            ids = obj.agentSelector(type_AA);
+            
             for i = ids
-                obj.agents(i).computeCellFormation(relax_factor); 
+                obj.agents(i).computeCellFormation(relax_factor, type_NB); 
             end
         end
         
@@ -199,32 +203,36 @@ classdef flock < handle
         end
         
         
-        function connectivityMaintenanceFF(obj, relax_factor, type)
+        function connectivityMaintenanceFF(obj, relax_factor, type_AA, type_NB)
             % modify the voronoi cells of every agent corresponding to the specified type,
             % to allow connectivity maintenance for fixed formation
             if(nargin < 3)
-                ids = obj.agentSelector('All');
-            else
-                ids = obj.agentSelector(type);
+                type_AA = 'All';
             end
-
+            if(nargin < 4)
+                type_NB = 'All';
+            end
+            ids = obj.agentSelector(type_AA);
+            
             for i = ids
-                obj.agents(i).applyConnectivityMaintenance(relax_factor);
+                obj.agents(i).applyConnectivityMaintenance(relax_factor, type_NB);
             end
         end
         
         
-        function connectivityMaintenance(obj, type)
+        function connectivityMaintenance(obj, type_AA, type_NB)
             % modify the voronoi cells of every agent corresponding to the specified type,
             % to allow connectivity maintenance
-            if(nargin < 3)
-                ids = obj.agentSelector('All');
-            else
-                ids = obj.agentSelector(type);
+            if(nargin < 2)
+                type_AA = 'All';
             end
-
+            if(nargin < 3)
+                type_NB = 'All';
+            end
+            ids = obj.agentSelector(type_AA);
+            
             for i = ids
-                obj.agents(i).applyConnectivityMaintenance();
+                obj.agents(i).applyConnectivityMaintenance(type_NB);
             end
         end
         
