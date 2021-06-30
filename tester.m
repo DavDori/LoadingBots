@@ -424,7 +424,7 @@ classdef tester
             robot_flock.fixFormation();
             
             robot_flock.computeVisibilitySets([]);
-            robot_flock.connectivityMaintenance(bound);
+            robot_flock.connectivityMaintenanceFF(bound);
             robot_flock.computeVoronoiTessellationFF(bound);
             robot_flock.applyConstantDensity();
             robot_flock.computeVoronoiCentroids();

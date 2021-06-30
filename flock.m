@@ -110,14 +110,17 @@ classdef flock < handle
             % every agent send a message to its neighbours containing name
             % and its absolute coordinates
             for i = 1:obj.n_agents
-                for j = 1:obj.n_agents
-                    if(i ~= j)
-                        % string to send
-                        mex = strcat('N', obj.agents(i).name, ...
-                                     ',X', num2str(obj.agents(i).position(1)),...
-                                     ',Y', num2str(obj.agents(i).position(2)), ';');
-                        obj.agents(i).sendMessage(obj.agents(j), mex);
+                for j = [1:i-1, i+1:obj.n_agents]
+                    if(obj.agents(i).attached == true)
+                        att = 'A';
+                    else
+                        att = '';
                     end
+                    % string to send
+                    mex = strcat('N', obj.agents(i).name, ...
+                                 ',X', num2str(obj.agents(i).position(1)),...
+                                 ',Y', num2str(obj.agents(i).position(2)), att,';');
+                    obj.agents(i).sendMessage(obj.agents(j), mex);
                 end
             end
         end
@@ -365,7 +368,7 @@ classdef flock < handle
                 type = 'All';
             end
             ids = obj.agentSelector(type);
-            global test;
+            
             c_formation = kp_formation * obj.computeVoronoiCentroids('Formation');
             if (nargin == 3)
                 c_obstacle  = kp_obstacle  * obj.computeVoronoiCentroids('Obstacle' );

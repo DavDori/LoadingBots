@@ -117,13 +117,13 @@ classdef agent < handle
                 if(exe(1) == 'N') % name of the agent
                     if(isempty(obj.Neighbours))
                         % init the structure
-                        obj.Neighbours = struct('name', exe(2:end), 'position', [0,0]);
+                        obj.Neighbours = struct('name', exe(2:end), 'position', [0,0], 'attached', false);
                         index = 1;
                     else
                         % check if the neighbours have been already met 
                         index = findStructFromName(obj.Neighbours, exe(2:end));
                         if(isnan(index) == true)
-                            obj.Neighbours(end+1) = struct('name',exe(2:end), 'position', [0,0]);
+                            obj.Neighbours(end+1) = struct('name',exe(2:end), 'position', [0,0], 'attached', false);
                             index = length(obj.Neighbours);
                         end
                         % else the index is stored in order to compute the
@@ -133,13 +133,16 @@ classdef agent < handle
                     obj.Neighbours(index).position(1) = str2double(exe(2:end));
                 elseif(exe(1) == 'Y') % y position of the agent
                     obj.Neighbours(index).position(2) = str2double(exe(2:end));
+                elseif(exe(1) == 'A') % agent is attached
+                    obj.Neighbours(index).attached = true;
                 end
             end
         end
         
         % METHODS: actions
         
-        function move(obj, velocity) % compute the position at the next integration step               
+        function move(obj, velocity) 
+            % compute the position at the next integration step               
             if(size(velocity, 2) ~= 1)
                 obj.position = obj.position + obj.Ts * velocity';
             else
@@ -164,7 +167,7 @@ classdef agent < handle
             % if possible attach the robot to the load
             obj.attached = isInsideRectLoad(obj);
             if(obj.attached == false)
-                error('Attach operation outside the load area')
+                warning('Attach operation outside the load area')
             end
         end
         
@@ -220,18 +223,32 @@ classdef agent < handle
         end
         
         
-        function computeCellCollisionAvoidance(obj)
-            % compute cell avoiding collisions with agents
-            obj.formation_VC.computeCell(obj.position, obj.Neighbours, 2 * obj.dimension);
+        function computeCellCollisionAvoidance(obj, type)
+            % compute cell avoiding collisions with agents + voroni cell
+            if(nargin < 2)
+                type = 'All';
+            end
+            % select agents that satisfy type
+            ids = getTypeIds(type, obj.Neighbours);
+            tmp_NB = obj.Neighbours(ids);
+                
+            obj.formation_VC.computeCell(obj.position, tmp_NB, 2 * obj.dimension);
         end
         
         
-        function computeCellFormation(obj, relax_factor)
+        function computeCellFormation(obj, relax_factor, type)
             % uses collision avoidance setting as min distance the distance
             % between ideal position and each agent, considering a
             % relax_factor
+            if(nargin < 3)
+                type = 'All';
+            end
+            % select agents that satisfy type
+            ids = getTypeIds(type, obj.Neighbours);
+            tmp_NB = obj.Neighbours(ids);
+            
             formation_lower_bound = obj.bounds - relax_factor;
-            obj.formation_VC.computeCell(obj.position, obj.Neighbours, formation_lower_bound);
+            obj.formation_VC.computeCell(obj.position, tmp_NB, formation_lower_bound);
         end
         
         
@@ -241,16 +258,23 @@ classdef agent < handle
         end
         
         
-        function applyConnectivityMaintenance(obj, relax_factor)
+        function applyConnectivityMaintenance(obj, relax_factor, type)
             % compute the union between the neighbours visibility sets
+            if(nargin < 3)
+                type = 'All';
+            end
+            % select agents that satisfy type
+            ids = getTypeIds(type, obj.Neighbours);
+            
             if(nargin > 1) 
                 upper_bounds = min(obj.lidar_range, obj.bounds + relax_factor);
             else
                 upper_bounds = obj.lidar_range * ones(size(obj.Neighbours, 2));
             end
             % POSSIBLE FIX: iterate for every neighbour outside!!!
+            % send only info of the selected neighbours
             obj.formation_VC.unionVisibilitySets(obj.position,...
-                upper_bounds, obj.Neighbours, obj.Neighbours_scan);
+                upper_bounds(ids), obj.Neighbours(ids), obj.Neighbours_scan(ids));
         end
         
         
@@ -328,12 +352,12 @@ classdef agent < handle
         end
         
         
-        function Neighbour_local = getNeighboursLocalPosition(obj)
+        function Neighbours_local = getNeighboursLocalPosition(obj)
             % return the Neighbours positions in local coordinates
-            Neighbour_local = zeros([size(obj.Neighbours,1), 2]);
+            Neighbours_local = zeros([size(obj.Neighbours,1), 2]);
             
             for i = 1:length(obj.Neighbours)
-                Neighbour_local(i,:) = ...
+                Neighbours_local(i,:) = ...
                     global2local(obj.position, obj.Neighbours(i).position'); 
             end
         end

@@ -91,10 +91,12 @@ classdef Voronoi < handle
         end
         
         
+        
         function computeCell(obj, pos, Neighbours, min_agents_dist)
             if(isempty(obj.visibility_set))
                 error('Visibility set has to be computed before this operation');
             end
+            
             % initCells(obj);
             tmp_cell = obj.visibility_set;
             % for every point 
