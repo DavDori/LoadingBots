@@ -27,63 +27,70 @@ formation_limit = 0.05;
 
 % ball
 ball_starting_point = [0.5; 0.5];
-ball_r = 0.2; % [m]
-ball_speed = 1;
+ball_r = 0.1; % [m]
+ball_speed = 0.5;
 ball_direction = deg2rad(10);
 
 Ts = 1e-1;
 sim_time = 2;
+steps = 80;
 
-kp_formation = 1;
-kp_obstacle = 2;
-offset_cargo = 0.1;
+kp_formation = 2;
+kp_obstacle = 3;
+
+offset_cargo = 0.1; %[m]
 
 bound = 0.05; % for fixed formation
-
+hold_positions_factor = 0.3;
 % attaching 
 param_at.kp = 1;
 param_at.th = 0.1;
 
 % detaching
 Kp_d = 1;
-th_d = 0.18;
+th_d = 0.2;
 %% objects initialization
 
 cargo = rect_load(st + center, center_mass, orientation, dimensions);
 
-agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5 - 1] + st, param, cargo, map);
-agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5 - 1] + st, param, cargo, map);
-agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5 - 1] + st, param, cargo, map);
-agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5 - 1] + st, param, cargo, map);
-agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2 - 1]   + st, param, cargo, map);
-agents(6) = agent('Anakin',[map.XWorldLimits(2) / 2 + 0.5; 2 - 1]   + st, param, cargo, map);
+s = 0.01; % perturbation scale factor
+pos1 = [map.XWorldLimits(2) / 2 + 0.5; 2.5 - 1] + st + randn(2,1)*s;
+pos2 = [map.XWorldLimits(2) / 2 + 0.5; 1.5 - 1] + st + randn(2,1)*s;
+pos3 = [map.XWorldLimits(2) / 2 - 0.5; 1.5 - 1] + st + randn(2,1)*s;
+pos4 = [map.XWorldLimits(2) / 2 - 0.5; 2.5 - 1] + st + randn(2,1)*s;
+pos5 = [map.XWorldLimits(2) / 2 - 0.5; 2 - 1]   + st + randn(2,1)*s;
+pos6 = [map.XWorldLimits(2) / 2 + 0.5; 2 - 1]   + st + randn(2,1)*s;
+pos7 = center + randn(2,1)*s;
+agents(1) = agent('James', pos1, param, cargo, map);
+agents(2) = agent('Pluto', pos2, param, cargo, map);
+agents(3) = agent('Gerlad',pos3, param, cargo, map);
+agents(4) = agent('Leila', pos4, param, cargo, map);
+agents(5) = agent('Samuel',pos5, param, cargo, map);
+agents(6) = agent('Anakin',pos6, param, cargo, map);
+agents(7) = agent('Robin', pos7, param, cargo, map);
 
 robots = flock(agents, cargo, Ts, 0);
 
 ball_v = [cos(ball_direction); sin(ball_direction)] * ball_speed;
 ball = Obstacle(ball_r, ball_starting_point, ball_v, Ts);
-global test;
 
 %% spread under the cargo
-test = 41;
-steps = 40;
-robots.spreadUnderCargo(15, 0.2, 1);
+robots.spreadUnderCargo(15, offset_cargo, 1);
 robots.attach();
 last_d = zeros(robots.n_agents, 1);
 
 %% Starting situation
-figure()
-hold on         
-xlim([0,map_width]);
-ylim([0,map_height]);
-axis equal
-grid on
-show(map);
-%robots.plotVoronoiTessellationDetailed(1);
-robots.plot();
-robots.plotCentroids();
-ball.plot();
-hold off
+% figure()
+% hold on         
+% xlim([0,map_width]);
+% ylim([0,map_height]);
+% axis equal
+% grid on
+% show(map);
+% robots.plot();
+% robots.plotCentroids();
+% ball.plot();
+% hold off
     
 %% P algorithm 
 h = figure();
@@ -93,7 +100,7 @@ ax = gca;
 ax.NextPlot = 'replaceChildren';
 GIF(steps) = struct('cdata',[],'colormap',[]);
 v = VideoWriter('sim_P.avi');
-v.FrameRate = 10;
+v.FrameRate = 5;
 open(v);
 
 % set positions to hold
@@ -106,21 +113,29 @@ for i = 1:steps
     robots.meetNeighbours();
     robots.sendScan(ball); 
     
-    robots.fixFormation('Attached');
+    robots.fixFormation('Attached'); % set bounds
             
     robots.computeVisibilitySets(ball);
-    %robots.connectivityMaintenanceFF(bound, 'Attached');
-    %robots.connectivityMaintenance('Detached');
+    % robots attached under cargo must maintain the formation, the upper
+    % bound is set
+    robots.connectivityMaintenanceFF(bound, 'Attached', 'Attached');
+    % detached robots have just to stay in connectivity range
+    robots.connectivityMaintenance('Detached', 'All');
     
-    %robots.computeVoronoiTessellationFF(bound, 'Attached');
-    robots.computeVoronoiTessellationCargo(offset_cargo);
+    %set the lower bound for the formation
+    robots.computeVoronoiTessellationFF(bound, 'Attached', 'Attached');
+    
+    %detached must stay in the box limits
+    robots.computeVoronoiTessellation('Detached', 'Detached');
     
     robots.applyConstantDensity('Obstacle');
-    robots.applyMultiplePointsDensity(hold_positions, 0.2, 'All');
+    
+    % all robots should tend to return to the original position under cargo
+    robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All');
     
     id_a = robots.attachable('P', param_at);
     [id_d, val_d] = robots.priorityRankingP(Kp_d);
-    if(isempty(id_d) == false) % there is at least a robot to deattach
+    if(isempty(id_d) == false) % there is at least a robot that can detach
         if(val_d > th_d) % agent wants to move
             robots.detach(id_d);
         end
@@ -138,13 +153,13 @@ for i = 1:steps
     robots.plotCentroids();
     ball.plot();
     hold off
-%     
+    
     GIF(i) = getframe(gcf);
     clf(h);
     writeVideo(v, GIF(i));
+    
     robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
     ball.move();
-    robots.print();
 end
 h.Visible = 'on';
 close(v);

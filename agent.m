@@ -92,7 +92,7 @@ classdef agent < handle
             % it
             if(isempty(obj.msg_in) == false)
                 texts = split(obj.msg_in,';');
-                for i = 1:length(texts)
+                for i = 1:length(texts)-1
                     cmds = split(texts(i),',');
                     for j = 1:length(cmds)
                         obj.executeCmd(cmds(j));
@@ -135,6 +135,8 @@ classdef agent < handle
                     obj.Neighbours(index).position(2) = str2double(exe(2:end));
                 elseif(exe(1) == 'A') % agent is attached
                     obj.Neighbours(index).attached = true;
+                elseif(exe(1) == 'D') % agent is attached
+                    obj.Neighbours(index).attached = false;
                 end
             end
         end

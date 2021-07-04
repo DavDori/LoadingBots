@@ -112,9 +112,9 @@ classdef flock < handle
             for i = 1:obj.n_agents
                 for j = [1:i-1, i+1:obj.n_agents]
                     if(obj.agents(i).attached == true)
-                        att = 'A';
+                        att = ',A';
                     else
-                        att = '';
+                        att = ',D';
                     end
                     % string to send
                     mex = strcat('N', obj.agents(i).name, ...
@@ -136,23 +136,39 @@ classdef flock < handle
             end
         end
         
-        function computeVoronoiTessellationCargo(obj, offset)
+        function computeVoronoiTessellationCargo(obj, offset, type_AA, type_NB)
             % compute the Voronoi tessellation of a discretization of the
             % nearby area for every agent in the flock considering the
             % perimeter of the cargo
-            for a = obj.agents
-                a.computeCellCollisionAvoidance();
-                a.applyVoronoiCargoLimits(offset);
+            if(nargin < 3)
+                type_AA = 'All';
+            end
+            if(nargin < 4)
+                type_NB = 'All';
+            end
+            ids = obj.agentSelector(type_AA);
+            
+            for i = ids
+                obj.agents(i).computeCellCollisionAvoidance(type_NB);
+                obj.agents(i).applyVoronoiCargoLimits(offset);
             end
         end
         
         
-        function computeVoronoiTessellation(obj)
+        function computeVoronoiTessellation(obj, type_AA, type_NB)
             % compute the Voronoi tessellation of a discretization of the
             % nearby area for every agent in the flock. Moreover it takes 
             % into account collision avoidance
-            for a = obj.agents
-                a.computeCellCollisionAvoidance(); 
+            if(nargin < 3)
+                type_AA = 'All';
+            end
+            if(nargin < 4)
+                type_NB = 'All';
+            end
+            ids = obj.agentSelector(type_AA);
+            
+            for i = ids
+                obj.agents(i).computeCellCollisionAvoidance(type_NB);
             end
         end
         

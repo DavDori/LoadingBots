@@ -206,10 +206,12 @@ classdef Voronoi < handle
             end
             % calculate the normalizer for the applied density
             norm = sum(tmp_cell(:)); 
-            if(isempty(obj.cell_density) == true)
+            if(isempty(obj.cell_density) == true && norm ~= 0)
                 obj.cell_density = tmp_cell / norm;
-            else
+            elseif(norm ~= 0)
                 obj.cell_density = obj.cell_density + tmp_cell / norm;
+            else
+                obj.cell_density = tmp_cell;
             end
         end
         
