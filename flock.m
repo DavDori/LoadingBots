@@ -482,7 +482,7 @@ classdef flock < handle
         function fixFormation(obj, type)
             % should be computed after the flock has spread under the
             % cargo. It sets the bound to keep to the robots
-            if(nargin < 3)
+            if(nargin < 2)
                 ids = obj.agentSelector('All');
             else
                 ids = obj.agentSelector(type);
@@ -601,7 +601,7 @@ classdef flock < handle
         end
         
         
-        function ids = attachable(obj, type, param)
+        function ids = attachable(obj)
             % check if the agents have escaped a problematic situation and
             % can attach to the cargo again. 
             % param is a struct with priority parameters.
@@ -611,15 +611,8 @@ classdef flock < handle
             index = 0;
             % check only detached agents
             for i = detached_ids
-                if(strcmp(type, 'PD') == true)
-                    prio = obj.agents(i).computePriorityP(param.kp, param.kd, param.last_d);
-                elseif(strcmp(type, 'P') == true)
-                    prio = obj.agents(i).computePriorityP(param.kp);
-                else
-                    error('wrong type of priority selected');
-                end
-
-                if(prio < param.th) % attach the agent
+                % check if the agent is inside the rectangle
+                if(obj.agents(i).isInsideRectLoad() == true) 
                     index = index + 1;
                     ids(index) = i;
                 end
@@ -636,7 +629,7 @@ classdef flock < handle
             ids_d = obj.detachable();
             p_to_move = p(ids_d); % take only agents that can detach
             if (sum(abs(p_to_move)) == 0)
-                id = [];
+                id  = [];
                 val = [];
             else
                 [val,id] = max(p_to_move);
@@ -644,15 +637,34 @@ classdef flock < handle
         end
         
         
-        function [id, new_d] = priorityRankingPD(obj, Kp, Kd, last_d)
+        function [id, val, new_d] = priorityRankingPD(obj, Kp, Kd, last_d)
             % return the id of the agent with higher priority that can move
             % using priority PD
             [p, new_d] = obj.priorityPD(Kp, Kd, last_d);
-            mask = obj.detachable();
-            p_to_move = p .* mask;
-            [~,id] = max(p_to_move);
+            ids_d = obj.detachable();
+            p_to_move = p(ids_d); % take only agents that can detach
+            if (sum(abs(p_to_move)) == 0)
+                id  = [];
+                val = [];
+            else
+                % between every agent that can move take the one with
+                % higher priority
+                [val,id] = max(p_to_move);
+            end
         end
         
+        
+        function [d_obs, d_for] = centroidsModule(obj, ids)
+            d_obs = zeros(size(ids));
+            d_for = zeros(size(ids));
+            n = 0;
+            if(isempty(ids) == false)
+                for i = ids
+                    n = n + 1;
+                    [d_obs(n), d_for(n)] = obj.agents(i).centroidsModule();
+                end
+            end
+        end
         
         % METHODS: representation   
         
@@ -743,6 +755,16 @@ classdef flock < handle
                 fprintf('\n');
             end
         end
+        
+        
+        function printStatus(obj)
+            % print basic info on the agents
+            for a = obj.agents
+                a.printStatus();
+                fprintf('\n');
+            end
+        end
+        
         
         function set.formation_factor(obj, xi)
             obj.formation_factor = xi;

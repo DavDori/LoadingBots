@@ -405,6 +405,15 @@ classdef agent < handle
         end
         
         
+        function [d_obs, d_for] = centroidsModule(obj)
+            % compute the distance of both centroids
+            c_o = obj.getObstacleCentroid();
+            c_f = obj.getFormationCentroid();
+            d_obs = sqrt(c_o' * c_o);
+            d_for = sqrt(c_f' * c_f);
+        end
+        
+        
         % METHODS: representation -----------------------------------------
         
         function plot(obj) 
@@ -446,6 +455,17 @@ classdef agent < handle
             fprintf('way point %f, %f \n', obj.way_point);
         end
         
+        
+        function printStatus(obj)
+            % print attached status of the agent
+            fprintf(obj.name);
+            if(obj.attached == true)
+                s = 'NO';
+            else
+                s = 'YES';
+            end
+            fprintf(strcat('\t attached \t', s));
+        end
         
         % SETTERS ---------------------------------------------------------
         function set.attached(obj, v)
