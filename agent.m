@@ -391,6 +391,13 @@ classdef agent < handle
             obj.bounds = bds;
         end
         
+        
+        function hit = checkHit(obj, Obs)
+            % check if the agent and obstacle collide
+            c_dist = sqrt((obj.position - Obs.center)' * (obj.position - Obs.center));
+            hit = c_dist - obj.dimension - Obs.radius < 0;
+        end
+        
         % PRIORITY METHODS ------------------------------------------------
         
         function [p, d] = computePriorityP(obj, Kp)

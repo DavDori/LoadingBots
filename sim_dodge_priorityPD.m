@@ -3,7 +3,7 @@ clear all
 close all
 clc
 %% SET UP
-video_flag = true;
+video_flag = false;
 st = [0;0]; % starting position offset (applied to agents and cargo)
 % map
 map = png2BOMap('map_test_1.png',22);
@@ -23,11 +23,11 @@ param.radius = 0.1;         % [m] hitbox of the agent
 param.N_rho = 36;           % division of the radius for discretization
 param.N_phi = 36;           % division of the angle for discretization
 
-% ball
-ball_starting_point = [1; 0.8];
-ball_r = 0.1; % [m] obstacle radius
-ball_speed = 0.4; % [m/s] obstacle speed
-ball_direction = deg2rad(10); % obstacle direction
+% Ball
+Ball_starting_point = [1; 0.8];
+Ball_r = 0.1; % [m] obstacle radius
+Ball_speed = 0.4; % [m/s] obstacle speed
+Ball_direction = deg2rad(10); % obstacle direction
 
 % Simulation parameters
 Ts = 1e-2;
@@ -74,8 +74,8 @@ agents(5) = agent('Samuel',pos5, param, cargo, map);
 
 robots = flock(agents, cargo, Ts, 0);
 
-ball_v = [cos(ball_direction); sin(ball_direction)] * ball_speed;
-ball = Obstacle(ball_r, ball_starting_point, ball_v, Ts);
+Ball_v = [cos(Ball_direction); sin(Ball_direction)] * Ball_speed;
+Ball = Obstacle(Ball_r, Ball_starting_point, Ball_v, Ts);
 
 
     
@@ -104,11 +104,11 @@ for i = 1:steps
     loadingBar(i, steps, 20, '#');
     
     robots.meetNeighbours();
-    robots.sendScan(ball); 
+    robots.sendScan(Ball); 
     
     robots.fixFormation('Attached'); % set bounds
             
-    robots.computeVisibilitySets(ball);
+    robots.computeVisibilitySets(Ball);
     % robots attached under cargo must maintain the formation, the upper
     % bound is set
     %robots.connectivityMaintenanceFF(bound, 'Attached', 'Attached');
@@ -166,8 +166,12 @@ for i = 1:steps
     end
     
     % next step of simulation
+    % follows the vectorial sum of both vectors defined by the centroids.
+    % In some cases the obstacle should be already considered by the
+    % formation cell but for non constant densities it has a different
+    % weight
     robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
-    ball.move();
+    Ball.move();
     
     if(video_flag == true)
         % video setup
@@ -181,7 +185,7 @@ for i = 1:steps
         robots.plot();
         robots.plotCentroids('Obstacle');
         robots.plotCentroids('Formation');
-        ball.plot();
+        Ball.plot();
         hold off
 
         frm = getframe(gcf);
@@ -190,7 +194,15 @@ for i = 1:steps
     end
     
     last_d = new_d;
+    
+    % critical feilure conditions
+    hit = robots.hasBeenHit(Ball); % check if there has been a collision
+    if(hit == true)
+        disp('Critical failure: Collision!');
+        break; % exit the simulation loop 
+    end
 end
+
 if(video_flag == true)
     h.Visible = 'on';
     close(v);

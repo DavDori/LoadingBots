@@ -530,7 +530,7 @@ classdef flock < handle
             end
         end
         
-        % METHODS: priority
+        % METHODS: priority -----------------------------------------------
         
         function p = priorityP(obj, Kp)
             % compute the proportional priority for each robot 
@@ -703,7 +703,18 @@ classdef flock < handle
             end
         end
         
-        % METHODS: representation   
+        
+        % METHODS: auxiliary      -----------------------------------------
+        
+        function hit = hasBeenHit(obj, obstacle)
+            % check if an agent has been hit by an obstacle
+            hit = false;
+            for a = obj.agents
+                hit = hit || a.checkHit(obstacle);
+            end
+        end
+        
+        % METHODS: representation -----------------------------------------
         
         function plot(obj)
             % representation in a 2D plane of the agents and the load
