@@ -586,7 +586,7 @@ classdef flock < handle
             % failure
             
             attached_ids = obj.getAttached();
-            ids = zeros(length(attached_ids), 1);
+            ids = zeros(1, length(attached_ids));
             index = 0;
             for i = attached_ids
                 % don't consider itsself in the balance
@@ -607,7 +607,7 @@ classdef flock < handle
             % param is a struct with priority parameters.
             
             detached_ids = obj.getDetached();
-            ids = zeros(length(detached_ids), 1);
+            ids = zeros(1, length(detached_ids));
             index = 0;
             % check only detached agents
             for i = detached_ids
@@ -654,14 +654,27 @@ classdef flock < handle
         end
         
         
-        function [d_obs, d_for] = centroidsModule(obj, ids)
-            d_obs = zeros(size(ids));
-            d_for = zeros(size(ids));
+        function [m_obs, m_for] = centroidsModule(obj, ids)
+            m_obs = zeros(size(ids'));
+            m_for = zeros(size(ids'));
             n = 0;
             if(isempty(ids) == false)
                 for i = ids
                     n = n + 1;
-                    [d_obs(n), d_for(n)] = obj.agents(i).centroidsModule();
+                    [m_obs(n), m_for(n)] = obj.agents(i).centroidsModule();
+                end
+            end
+        end
+        
+        
+        function [m] = centroidModule(obj, ids)
+            % calculate the module of the sum of the two centriods
+            m = zeros(size(ids));
+            n = 0;
+            if(isempty(ids) == false)
+                for i = ids
+                    n = n + 1;
+                    m(n) = obj.agents(i).centroidModule();
                 end
             end
         end

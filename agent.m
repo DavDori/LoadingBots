@@ -405,12 +405,21 @@ classdef agent < handle
         end
         
         
-        function [d_obs, d_for] = centroidsModule(obj)
+        function [m_obs, m_for] = centroidsModule(obj)
             % compute the distance of both centroids
             c_o = obj.getObstacleCentroid();
             c_f = obj.getFormationCentroid();
-            d_obs = sqrt(c_o' * c_o);
-            d_for = sqrt(c_f' * c_f);
+            m_obs = sqrt(c_o' * c_o);
+            m_for = sqrt(c_f' * c_f);
+        end
+        
+        
+        function [m] = centroidModule(obj)
+            % compute the distance of the sum of both centroids
+            c_o = obj.getObstacleCentroid();
+            c_f = obj.getFormationCentroid();
+            c   = c_o + c_f;
+            m = sqrt(c' * c);
         end
         
         
@@ -427,7 +436,13 @@ classdef agent < handle
                 plot(obj.position(1), obj.position(2), 'or')
             end
             circle(obj.position(1), obj.position(2), obj.dimension);
-            text(obj.position(1) + offset, obj.position(2), obj.name);
+            if obj.attached == true
+                status = '(A)';
+            else
+                status = '(D)';
+            end
+            
+            text(obj.position(1) + offset, obj.position(2), strcat(obj.name, status));
             hold off
         end
         
@@ -460,9 +475,9 @@ classdef agent < handle
             % print attached status of the agent
             fprintf(obj.name);
             if(obj.attached == true)
-                s = 'NO';
-            else
                 s = 'YES';
+            else
+                s = 'NO';
             end
             fprintf(strcat('\t attached \t', s));
         end
