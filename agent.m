@@ -354,6 +354,13 @@ classdef agent < handle
         end
         
         
+        function d = getDistanceFromCOM(obj)
+            % compute the distance form the center of mass of the cargo
+            pos_diff = obj.position - obj.cargo.center - obj.cargo.center_mass;
+            d = sqrt(pos_diff' * pos_diff);
+        end
+        
+        
         function Neighbours_local = getNeighboursLocalPosition(obj)
             % return the Neighbours positions in local coordinates
             Neighbours_local = zeros([size(obj.Neighbours,1), 2]);
@@ -400,7 +407,7 @@ classdef agent < handle
             % proximity
             c_o = obj.getObstacleCentroid();
             d = sqrt(c_o' * c_o);
-            p = d * Kp + (d - last_d) / obj.Ts * Kd;
+            p = d * Kp + (last_d - d) * Kd;
             obj.priority = p;
         end
         

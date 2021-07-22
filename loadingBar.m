@@ -12,7 +12,7 @@ function loadingBar(current, final, n_bars, symbol)
         filler = strcat(filler, '-');
     end
     
-    msg = strcat(msg, filler, '| ', string(perc), ' %\n');
+    msg = strcat(msg, filler, '| ', string(perc));
     clc;
     disp(msg);
 end

@@ -654,6 +654,30 @@ classdef flock < handle
         end
         
         
+        function d = getDistancesFromCOM(obj, ids)
+            % for the selected agents get the distance from the COM
+            if(nargin < 2)
+                ids = 1:obj.n_agents;
+            end
+            d = zeros(size(ids'));
+            n = 0;
+            for i = ids
+                n = n + 1;
+                d(n) = obj.agents(i).getDistanceFromCOM();
+            end
+        end
+        
+        
+        function pCOM = priorityCOM(obj, k, m)
+            % compute the distance from the COM, the closest to 0 the
+            % higher, meaning that the agent is a bit useless.
+            % k defines the convergance rate
+            % m defines the amplitude
+            d = getDistancesFromCOM(obj);
+            pCOM = m * exp(-k * d); 
+        end
+        
+        
         function [m_obs, m_for] = centroidsModule(obj, ids)
             m_obs = zeros(size(ids'));
             m_for = zeros(size(ids'));

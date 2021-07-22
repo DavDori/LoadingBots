@@ -2,7 +2,6 @@
 clear all
 close all
 clc
-format loose % let me write spaces!
 %% SET UP
 video_flag = true;
 st = [0;0]; % starting position offset (applied to agents and cargo)
@@ -31,7 +30,7 @@ ball_speed = 0.4; % [m/s] obstacle speed
 ball_direction = deg2rad(10); % obstacle direction
 
 % Simulation parameters
-Ts = 1e-1;
+Ts = 1e-2;
 sim_time = 8;
 slow_factor = 0.5;
 
@@ -46,6 +45,9 @@ hold_positions_factor = 0.3;
 % prioirty
 Kp = 0.5; % importance of obstacle distance in priority
 Kd = 1;   % importance of obstacle velocity in priority
+
+alpha_com = 5; % convergance rate of the priority on center of mass distance
+K_com = 0.15; % importance of the priority on center of mass distance
 
 % attaching 
 param_at.Kfor = 1;
@@ -98,9 +100,6 @@ hold_positions = robots.getAgentsPositions('All');
 % initialize the obstacle distances for PD priority with the maximunm value
 last_d = ones(robots.n_agents, 1) * param.range;
 
-
-fprintf('Number of simulation steps: %d \n', steps);
-
 for i = 1:steps
     loadingBar(i, steps, 20, '#');
     
@@ -133,7 +132,10 @@ for i = 1:steps
     % attach will have a small priority value, while agents in danger an
     % high priority value
     [priorityPD, new_d] = robots.priorityPD(Kp, Kd, last_d);
-
+    % compute the priority in function of the distance from the center of
+    % mass of the cargo
+    priorityCOM = robots.priorityCOM(alpha_com, K_com);
+    priority = priorityPD + priorityCOM;
     % return id of attacheable and detachable agents
     ids_detachable = robots.detachable();
     ids_attachable = robots.attachable();
@@ -144,7 +146,7 @@ for i = 1:steps
     if(isempty(ids_detachable) == false) % there is at least a robot that can detach
         % select the one with higher priority. One agent at the time can
         % detach
-        [val_detach, id] = max(priorityPD(ids_detachable));
+        [val_detach, id] = max(priority(ids_detachable));
         
         if(val_detach > param_dt.th)
             robots.detach(id);
