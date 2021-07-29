@@ -278,17 +278,17 @@ classdef flock < handle
         
         % METHODS: voronoi cell density -----------------------------------
         
-        function applyFarFromCenterMassDensity(obj, type)
+        function applyFarFromCenterMassDensity(obj, K, type)
             % for every robot of specified type, apply the far from center 
             % of mass density on the Voronoi cell
-            if(nargin < 2)
+            if(nargin < 3)
                 ids = obj.agentSelector('All');
             else
                 ids = obj.agentSelector(type);
             end
             
             for i = ids
-                obj.agents(i).applyVoronoiFarFromCargoDensity();
+                obj.agents(i).applyVoronoiFarFromCargoDensity(K);
             end
         end
         
@@ -715,6 +715,14 @@ classdef flock < handle
         end
         
         % METHODS: representation -----------------------------------------
+        
+        
+        function printWithAgentName(obj, ary)
+            for i = 1:obj.n_agents
+                disp(strcat(obj.agents(i).name, string(ary(i))));
+            end
+        end
+        
         
         function plot(obj)
             % representation in a 2D plane of the agents and the load

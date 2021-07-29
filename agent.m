@@ -288,12 +288,11 @@ classdef agent < handle
         
         % Density methods
         
-        function applyVoronoiFarFromCargoDensity(obj)
+        function applyVoronoiFarFromCargoDensity(obj, K)
             % should give an equivalent result to computeVoronoiCellCentroidAwayCenterMass
             % define density function
             ref = obj.position - (obj.cargo.center + obj.cargo.center_mass);
-            gain = 10;
-            fun_d = @(rho,phi) gain * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
+            fun_d = @(rho,phi) K * sqrt((rho * [cos(phi);sin(phi)] + ref)'...
                 * (rho * [cos(phi);sin(phi)] + ref));
             % apply density function to the actual voronoi cell
             obj.formation_VC.applyDensity(fun_d);
@@ -414,7 +413,7 @@ classdef agent < handle
             % proximity
             c_o = obj.getObstacleCentroid();
             d = sqrt(c_o' * c_o);
-            p = d * Kp + (last_d - d) * Kd;
+            p = d * Kp + (d - last_d) * Kd;
             obj.priority = p;
         end
         
