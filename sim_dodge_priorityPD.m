@@ -17,14 +17,14 @@ cargo_p.dimensions =  [1.5; 1.5];   % [m]
 cargo_p.orientation = pi/2;         % [rad]
 
 % Agents
-agent_p.range = 2;            % [m] max observable range
+agent_p.range = 2.5;            % [m] max observable range
 agent_p.comm_range = 5;       % [m] max connection distance
-agent_p.radius = 0.1;         % [m] hitbox of the agent
+agent_p.radius = 0.05;         % [m] hitbox of the agent
 agent_p.N_rho = 36;           % division of the radius for discretization
 agent_p.N_phi = 36;           % division of the angle for discretization
 
 % Ball
-ball_p.init_angle = 0;   % [rad] angle at which the ball is located wtr the center
+ball_p.init_angle = pi/4;   % [rad] angle at which the ball is located wtr the center
 ball_p.init_distance = 2;% [m] distance of the ball location from the center
 ball_p.r = 0.1;          % [m] obstacle radius
 ball_p.speed = 0.4;      % [m/s] obstacle speed
@@ -34,28 +34,35 @@ Ts = 5e-2;
 sim_time = 8;
 slow_factor = 0.5;
 
+% Centroids gains
+% consider that the formation cell is always included in the obstacle
+% Voroni cell
 kp_formation = 2;   % formation centroid gain
-kp_obstacle = 4;    % obstacle centroid gain
+kp_obstacle = 0;    % obstacle centroid gain
+
 SUC_steps = 30;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
 
 bound = 0.05; % buonds to keep when in formation
 hold_positions_factor = 0.3;
 
-% prioirty
-Kp = 0.25; % importance of obstacle distance in priority
-Kd = 1;   % importance of obstacle velocity in priority
-
-alpha_com = 5; % convergance rate of the priority on center of mass distance
-K_com = 0.10;  % importance of the priority on center of mass distance
-
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.05; % attach threshold
+param_at.th = 0.10; % attach threshold
 
 % detaching
-param_dt.th = 0.08; % thershold for detach
+param_dt.th = 0.15; % thershold for detach
+
+% prioirty
+Kp = 0.8; % importance of obstacle distance in priority
+Kd = 0.2;   % importance of obstacle velocity in priority
+
+alpha_COM = 5; % convergance rate of the priority on center of mass distance
+K_COM = param_dt.th * 2;  % importance of the priority on center of mass distance
+offset_COM = -param_dt.th;
+
+
 %% objects initialization
 
 cargo = rect_load(st + center, cargo_p.center_mass, cargo_p.orientation,...
@@ -71,14 +78,14 @@ pos6 = center + [-0.2; -0.2] + st + rand(2,1)*w;
 pos7 = center + [-0.2;  0.2] + st + rand(2,1)*w;
 pos8 = center + [ 0.2; -0.2] + st + rand(2,1)*w;
 
-agents(1) = agent('Ali', pos1, agent_p, cargo, map);
-agents(2) = agent('Sam', pos2, agent_p, cargo, map);
-agents(3) = agent('Bob', pos3, agent_p, cargo, map);
-agents(4) = agent('Kid', pos4, agent_p, cargo, map);
-agents(5) = agent('Rip', pos5, agent_p, cargo, map);
-agents(6) = agent('Fox', pos6, agent_p, cargo, map);
-agents(7) = agent('Rob', pos7, agent_p, cargo, map);
-agents(8) = agent('Est', pos8, agent_p, cargo, map);
+agents(1) = agent('1', pos1, agent_p, cargo, map);
+agents(2) = agent('2', pos2, agent_p, cargo, map);
+agents(3) = agent('3', pos3, agent_p, cargo, map);
+agents(4) = agent('4', pos4, agent_p, cargo, map);
+agents(5) = agent('5', pos5, agent_p, cargo, map);
+agents(6) = agent('6', pos6, agent_p, cargo, map);
+agents(7) = agent('7', pos7, agent_p, cargo, map);
+agents(8) = agent('8', pos8, agent_p, cargo, map);
 
 robots = flock(agents, cargo, Ts, 0);
 
@@ -147,6 +154,9 @@ hold_positions = robots.getAgentsPositions('All');
 % initialize the obstacle distances for PD priority with the maximunm value
 last_d = zeros(robots.n_agents, 1) * agent_p.range; % set to 0
 
+priority_PD_history = zeros(steps, robots.n_agents);
+priority_COM_history = zeros(steps, robots.n_agents);
+
 for i = 1:steps
     loadingBar(i, steps, 20, '#');
     
@@ -156,26 +166,21 @@ for i = 1:steps
     robots.fixFormation('Attached'); % set bounds
             
     robots.computeVisibilitySets(Ball);
-    % robots attached under cargo must maintain the formation, the upper
-    % bound is set
-    %robots.connectivityMaintenanceFF(bound, 'Attached', 'Attached');
+    
     % detached robots have just to stay in connectivity range
-    robots.connectivityMaintenance('Detached', 'All');
-    
-    %set the lower bound for the formation
-    %robots.computeVoronoiTessellationFF(bound, 'Attached', 'Attached');
-    
+    robots.connectivityMaintenance('Detached', 'Attached');
+
     %detached must stay in the box limits
-    %robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'Detached');
+    robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'Detached');
     % otherwise use
-    robots.computeVoronoiTessellation('Detached', 'Detached');
+    % robots.computeVoronoiTessellation('Detached', 'Detached');
     
     robots.applyConstantDensity('Obstacle');
     
     % all robots should tend to return to the original position under cargo
     robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All');
     % add 
-    robots.applyFarFromCenterMassDensity(2, 'Detached');
+    %robots.applyFarFromCenterMassDensity(2, 'Detached');
     
     robots.computeVoronoiCentroids();
     
@@ -185,8 +190,12 @@ for i = 1:steps
     [priorityPD, new_d] = robots.priorityPD(Kp, Kd, last_d);
     % compute the priority in function of the distance from the center of
     % mass of the cargo
-    priorityCOM = robots.priorityCOM(alpha_com, K_com);
+    priorityCOM = robots.priorityCOM(alpha_COM, K_COM, offset_COM);
+
     priority = priorityPD + priorityCOM;
+    
+    priority_PD_history(i,:) = priorityPD;
+    priority_COM_history(i,:) = priorityCOM;
     
     % return id of attacheable and detachable agents
     ids_detachable = robots.detachable();
@@ -238,8 +247,8 @@ for i = 1:steps
         show(map);
         %robots.plotVoronoiTessellationDetailed(3);
         robots.plot();
-        robots.plotCentroids('Obstacle');
-        robots.plotCentroids('Formation');
+        %robots.plotCentroids('Obstacle');
+        %robots.plotCentroids('Formation');
         Ball.plot();
         hold off
 
@@ -262,3 +271,21 @@ if(video_flag == true)
     h.Visible = 'on';
     close(v);
 end
+
+%% plots 
+figure()
+subplot(1,2,1)
+hold on
+title('PD priority')
+for i = 1:robots.n_agents
+    plot(priority_PD_history(:,i),'DisplayName', string(i));
+end
+legend 
+subplot(1,2,2)
+hold on
+title('COM priority')
+for i = 1:robots.n_agents
+    plot(priority_COM_history(:,i),'DisplayName', string(i));
+end
+legend 
+

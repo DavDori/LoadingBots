@@ -394,8 +394,8 @@ classdef flock < handle
             ids = obj.agentSelector(type);
             
             c_formation = kp_formation * obj.computeVoronoiCentroids('Formation');
-            if (nargin == 3)
-                c_obstacle  = kp_obstacle  * obj.computeVoronoiCentroids('Obstacle' );
+            if (nargin >= 3)
+                c_obstacle  = kp_obstacle  * obj.computeVoronoiCentroids('Obstacle');
             else
                 c_obstacle = zeros(size(c_formation));
             end
@@ -405,7 +405,7 @@ classdef flock < handle
             
             for i = ids
                 centroid = c(i,:);
-                % set kp as 1 to keep the two kps
+                % set kp as 1 to keep the driven gain dependent on the two kps
                 obj.agents(i).moveToCentroid(1, centroid);  
             end
         end
@@ -668,13 +668,14 @@ classdef flock < handle
         end
         
         
-        function pCOM = priorityCOM(obj, k, m)
+        function pCOM = priorityCOM(obj, k, m, q)
             % compute the distance from the COM, the closest to 0 the
             % higher, meaning that the agent is a bit useless.
             % k defines the convergance rate
             % m defines the amplitude
+            % q defines the offset
             d = getDistancesFromCOM(obj);
-            pCOM = m * exp(-k * d); 
+            pCOM = q + m * exp(-k * d); 
         end
         
         
