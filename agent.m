@@ -8,6 +8,7 @@ classdef agent < handle
         dimension (1,1) double {mustBeNumeric}  % agent as a circle 
         attached (1,1) logical % is the agent attached to the load? 
         index_s;
+        color;  % color of the agent in plots
         
         cargo rect_load % object representing the load the agents have to move around
         map binaryOccupancyMap % map where the agent is working (needed for simulations)
@@ -43,6 +44,7 @@ classdef agent < handle
             obj.formation_VC = Voronoi(param.N_rho, param.N_phi, param.range);
             obj.obstacle_VC = Voronoi(param.N_rho, param.N_phi, param.range);
             obj.priority = 0;
+            obj.color = rand(1,3);
         end
               
         % METHODS: communication
@@ -448,7 +450,7 @@ classdef agent < handle
             else
                 plot(obj.position(1), obj.position(2), 'or')
             end
-            circle(obj.position(1), obj.position(2), obj.dimension);
+            viscircles(obj.position', obj.dimension, 'color', obj.color);
             if obj.attached == true
                 status = '(A)';
             else

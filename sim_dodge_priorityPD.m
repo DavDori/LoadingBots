@@ -2,8 +2,11 @@
 clear all
 close all
 clc
+
 %% SET UP
 video_flag = true;
+steps_per_frame = 3; % take 1 frame every 3 steps of simulation
+
 st = [0;0]; % starting position offset (applied to agents and cargo)
 % map
 map = png2BOMap('map_test_1.png',22);
@@ -27,11 +30,11 @@ agent_p.N_phi = 36;           % division of the angle for discretization
 ball_p.init_angle = pi/4;   % [rad] angle at which the ball is located wtr the center
 ball_p.init_distance = 2;% [m] distance of the ball location from the center
 ball_p.r = 0.1;          % [m] obstacle radius
-ball_p.speed = 0.4;      % [m/s] obstacle speed
+ball_p.speed = 0.2;      % [m/s] obstacle speed
 ball_p.w = deg2rad(5);   % [rad] uncertainty on the obstacle direction
 % Simulation parameters
 Ts = 5e-2;
-sim_time = 8;
+sim_time = 16;
 slow_factor = 0.5;
 
 % Centroids gains
@@ -108,7 +111,7 @@ if(video_flag == true)
     ax = gca;
     ax.NextPlot = 'replaceChildren';
     v = VideoWriter('sim_PD.avi');
-    v.FrameRate = fix(slow_factor * steps / sim_time);
+    v.FrameRate = fix(slow_factor * steps / (sim_time * steps_per_frame));
     open(v);
 end
 
@@ -123,7 +126,8 @@ for i = 1:SUC_steps
     robots.computeVoronoiCentroids();
     robots.moveToCentroids(kp_formation);
     
-    if(video_flag == true)
+    % save the frame
+    if(video_flag == true && rem(i, steps_per_frame) == 0)
         % video setup
         hold on         
         xlim([0,map_width]);
@@ -200,20 +204,18 @@ for i = 1:steps
     % return id of attacheable and detachable agents
     ids_detachable = robots.detachable();
     ids_attachable = robots.attachable();
-    
-    
-    %robots.printWithAgentName(priority);
-    
+
     % calculate the centroid module for both attachable and detachable
     [m_obs_attach, m_for_attach] = robots.centroidsModule(1:robots.n_agents);
    
     if(isempty(ids_detachable) == false) % there is at least a robot that can detach
         % select the one with higher priority. One agent at the time can
         % detach
-        [val_detach, id] = max(priority(ids_detachable));
+        [val_detach, id_rel] = max(priority(ids_detachable));
+        id_abs = ids_detachable(id_rel); % get the absolute id of the agent
         
         if(val_detach > param_dt.th)
-            robots.detach(id);
+            robots.detach(id_abs);
         end
     end
     
@@ -237,7 +239,7 @@ for i = 1:steps
     robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
     Ball.move();
     
-    if(video_flag == true)
+    if(video_flag == true && rem(i, steps_per_frame) == 0)
         % video setup
         hold on         
         xlim([0,map_width]);
@@ -247,7 +249,7 @@ for i = 1:steps
         show(map);
         %robots.plotVoronoiTessellationDetailed(3);
         robots.plot();
-        %robots.plotCentroids('Obstacle');
+        robots.plotCentroids('Obstacle');
         %robots.plotCentroids('Formation');
         Ball.plot();
         hold off
@@ -274,18 +276,25 @@ end
 
 %% plots 
 figure()
-subplot(1,2,1)
-hold on
-title('PD priority')
-for i = 1:robots.n_agents
-    plot(priority_PD_history(:,i),'DisplayName', string(i));
-end
-legend 
-subplot(1,2,2)
-hold on
-title('COM priority')
-for i = 1:robots.n_agents
-    plot(priority_COM_history(:,i),'DisplayName', string(i));
-end
-legend 
-
+subplot(1,3,1)
+    hold on
+    title('PD priority')
+    for i = 1:robots.n_agents
+        plot(priority_PD_history(:,i),'DisplayName', string(i));
+    end
+    legend 
+subplot(1,3,2)
+    hold on
+    title('COM priority')
+    for i = 1:robots.n_agents
+        plot(priority_COM_history(:,i),'DisplayName', string(i));
+    end
+    legend 
+subplot(1,3,3)
+    hold on;
+    title('total priority');
+    for i = 1:robots.n_agents
+        plot(priority_COM_history(:,i) + priority_PD_history(:,i), 'DisplayName', string(i));
+    end
+    plot([1,size(priority_COM_history,1)], [param_dt.th,param_dt.th],'r'); 
+    legend; 
