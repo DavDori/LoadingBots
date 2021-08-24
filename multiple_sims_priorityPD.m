@@ -65,20 +65,21 @@ K_COM = param_dt.th * 2;  % importance of the priority on center of mass distanc
 offset_COM = -param_dt.th;
 
 % agents starting positions -----------------------------------------------
-w = 0.01; % perturbation scale factor
-pos1 = center + [ 0.4;  0.4] + st + rand(2,1)*w;
-pos2 = center + [ 0.4; -0.4] + st + rand(2,1)*w;
-pos3 = center + [-0.4;  0.4] + st + rand(2,1)*w;
-pos4 = center + [-0.4; -0.4] + st + rand(2,1)*w;
-pos5 = center + [ 0.2;  0.2] + st + rand(2,1)*w;
-pos6 = center + [-0.2; -0.2] + st + rand(2,1)*w;
-pos7 = center + [-0.2;  0.2] + st + rand(2,1)*w;
-pos8 = center + [ 0.2; -0.2] + st + rand(2,1)*w;
+
+n_agents = 20;
+
+names = {'Bob', 'Jet', 'Zoe', 'Tim', 'Lue', 'Hari', '007', 'Gaal', 'Tif',...
+    'Hug', 'Mug', 'May','Emy', 'Jim', 'Pos', 'Ari', 'Sin', 'Cos', 'Mem'};
 
 steps = fix(sim_time / Ts);
+
+division_starting_spots = 5;
+
+
 %% OBJECT INIT
-cargo = rect_load(st + center, cargo_p.center_mass, cargo_p.orientation,...
+cargo = RectangularCargo(st + center, cargo_p.center_mass, cargo_p.orientation,...
     cargo_p.dimensions);
+
 %% MULTIPLE SIMULATIONS
 % build array to take into account the successful simulations for each
 % angle
@@ -87,15 +88,14 @@ success_dodge(1,:) = (2*pi/n_sims):(2*pi/n_sims):2*pi;
 
 for j = 1:n_sims
     loadingBar(j, n_sims, 20, '#');
-    % each time resets positions
-    agents(1) = agent('1', pos1, agent_p, cargo, map);
-    agents(2) = agent('2', pos2, agent_p, cargo, map);
-    agents(3) = agent('3', pos3, agent_p, cargo, map);
-    agents(4) = agent('4', pos4, agent_p, cargo, map);
-    agents(5) = agent('5', pos5, agent_p, cargo, map);
-    %agents(6) = agent('6', pos6, agent_p, cargo, map);
-    %agents(7) = agent('7', pos7, agent_p, cargo, map);
-    %agents(8) = agent('8', pos8, agent_p, cargo, map);
+    % each time resets positions and redefine the agents
+    pos_relative = randomStartingPositions(cargo_p.dimensions, division_starting_spots...
+          , n_agents) - ones(2,1) .* cargo_p.dimensions / 2;
+    
+    for i = 1:n_agents
+        pos = cargo.relative2absolute(pos_relative(:,i));
+        agents(i) = agent(names(i), pos, agent_p, cargo, map);
+    end
 
     robots = flock(agents, cargo, Ts, 0);
 

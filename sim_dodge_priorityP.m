@@ -51,7 +51,7 @@ Kp_d = 1;
 th_d = 0.2;
 %% objects initialization
 
-cargo = rect_load(st + center, center_mass, orientation, dimensions);
+cargo = RectangularCargo(st + center, center_mass, orientation, dimensions);
 
 s = 0.01; % perturbation scale factor
 pos1 = [map.XWorldLimits(2) / 2 + 0.5; 2.5 - 1] + st + randn(2,1)*s;
@@ -148,7 +148,7 @@ for i = 1:steps
     axis equal
     grid on
     show(map);
-    robots.plotVoronoiTessellationDetailed(1);
+    robots.plotVoronoiTessellationDetailed(3);
     robots.plot();
     robots.plotCentroids();
     ball.plot();

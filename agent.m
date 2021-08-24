@@ -10,7 +10,7 @@ classdef agent < handle
         index_s;
         color;  % color of the agent in plots
         
-        cargo rect_load % object representing the load the agents have to move around
+        cargo RectangularCargo % object representing the load the agents have to move around
         map binaryOccupancyMap % map where the agent is working (needed for simulations)
         
         Ts (1,1) double {mustBeNumeric} % sampling time
@@ -270,7 +270,7 @@ classdef agent < handle
             % select agents that satisfy type
             ids = getTypeIds(type, obj.Neighbours);
             
-            if(nargin > 1) 
+            if(nargin > 1 && isempty(relax_factor) == false) 
                 upper_bounds = min(obj.lidar_range, obj.bounds + relax_factor);
             else
                 upper_bounds = obj.lidar_range * ones(size(obj.Neighbours, 2));
@@ -440,7 +440,7 @@ classdef agent < handle
         
         % METHODS: representation -----------------------------------------
         
-        function plot(obj) 
+        function plot(obj, plot_name) 
             % represent the agent on a 2D plain in red if free to move, in 
             % blue if attached
             hold on
@@ -456,8 +456,9 @@ classdef agent < handle
             else
                 status = '(D)';
             end
-            
-            text(obj.position(1) + offset, obj.position(2), strcat(obj.name, status));
+            if(plot_name == true)
+                text(obj.position(1) + offset, obj.position(2), strcat(obj.name, status));
+            end
             hold off
         end
         

@@ -15,21 +15,23 @@ map_height = map.YLocalLimits(2) - map.YLocalLimits(1);
 center = [map.XWorldLimits(2) / 2 ; map.YWorldLimits(2) / 2]; % [m]
 cargo_p.center_mass = [0;0];        % [m]
 cargo_p.dimensions =  [1.5; 1.5];   % [m]
-cargo_p.orientation = pi/2;         % [rad]
+cargo_p.orientation = pi / 2;       % [rad]
 
 % Agents
-agent_p.range = 2.5;            % [m] max observable range
-agent_p.comm_range = 5;       % [m] max connection distance
-agent_p.radius = 0.05;         % [m] hitbox of the agent
-agent_p.N_rho = 36;           % division of the radius for discretization
-agent_p.N_phi = 36;           % division of the angle for discretization
+n_agents = 20;               % number of agents
+division_starting_spots = 5; % define the starting areas
+agent_p.range = 2.0;         % [m] max observable range
+agent_p.comm_range = 5;      % [m] max connection distance
+agent_p.radius = 0.05;       % [m] hitbox of the agent
+agent_p.N_rho = 15;          % division of the radius for discretization
+agent_p.N_phi = 36;          % division of the angle for discretization
 
 % Ball
-ball_p.init_angle = 3.6;   % [rad] angle at which the ball is located wtr the center
-ball_p.init_distance = 2;% [m] distance of the ball location from the center
-ball_p.r = 0.1;          % [m] obstacle radius
-ball_p.speed = 0.2;      % [m/s] obstacle speed
-ball_p.w = deg2rad(0);   % [rad] uncertainty on the obstacle direction
+ball_p.init_angle = 0;  % [rad] angle at which the ball is located wtr the center
+ball_p.init_distance = 2; % [m] distance of the ball location from the center
+ball_p.r = 0.1;           % [m] obstacle radius
+ball_p.speed = 0.2;       % [m/s] obstacle speed
+ball_p.w = deg2rad(10);    % [rad] uncertainty on the obstacle direction
 
 % Simulation parameters----------------------------------------------------
 video_flag = true;
@@ -42,22 +44,22 @@ slow_factor = 1;   % x1 speed of visualization
 % Centroids gains ---------------------------------------------------------
 % consider that the formation cell is always included in the obstacle
 % Voroni cell
-kp_formation = 1;   % formation centroid gain
+kp_formation = 1.5;   % formation centroid gain
 kp_obstacle = 0.2;    % obstacle centroid gain
 
-SUC_steps = 30;     % spread under cargo steps
+SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
 
 bound = 0.05; % buonds to keep when in formation
-hold_positions_factor = 0.2;
+hold_positions_factor = 0.5;
 
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.5; % attach threshold
+param_at.th = 0.2; % attach threshold
 
 % detaching
-param_dt.th = 0.15; % thershold for detach
+param_dt.th = 0.12; % thershold for detaching
 
 % prioirty
 Kp = 0.5; % importance of obstacle distance in priority
@@ -70,27 +72,23 @@ offset_COM = -param_dt.th;
 
 %% objects initialization
 
-cargo = rect_load(st + center, cargo_p.center_mass, cargo_p.orientation,...
+cargo = RectangularCargo(st + center, cargo_p.center_mass, cargo_p.orientation,...
     cargo_p.dimensions);
 
-w = 0.00; % perturbation scale factor
-pos1 = center + [ 0.4;  0.4] + st + rand(2,1)*w;
-pos2 = center + [ 0.4; -0.4] + st + rand(2,1)*w;
-pos3 = center + [-0.4;  0.4] + st + rand(2,1)*w;
-pos4 = center + [-0.4; -0.4] + st + rand(2,1)*w;
-pos5 = center + [ 0.2;  0.2] + st + rand(2,1)*w;
-pos6 = center + [-0.2; -0.2] + st + rand(2,1)*w;
-pos7 = center + [-0.2;  0.2] + st + rand(2,1)*w;
-pos8 = center + [ 0.2; -0.2] + st + rand(2,1)*w;
 
-agents(1) = agent('1', pos1, agent_p, cargo, map);
-agents(2) = agent('2', pos2, agent_p, cargo, map);
-agents(3) = agent('3', pos3, agent_p, cargo, map);
-agents(4) = agent('4', pos4, agent_p, cargo, map);
-agents(5) = agent('5', pos5, agent_p, cargo, map);
-agents(6) = agent('6', pos6, agent_p, cargo, map);
-agents(7) = agent('7', pos7, agent_p, cargo, map);
-agents(8) = agent('8', pos8, agent_p, cargo, map);
+% set initial positions as random uniformly distributed under the cargo,
+% considering the biggest square that is still under the cargo itself
+
+names = {'Bob', 'Jet', 'Zoe', 'Tim', 'Lue', 'Hari', '007', 'Gaal', 'Tif',...
+    'Hug', 'Mug', 'May','Emy', 'Jim', 'Pos', 'NaN', 'Sin', 'Cos', 'Mem', 'PLC'};
+
+pos_relative = randomStartingPositions(cargo_p.dimensions, division_starting_spots...
+          , n_agents) - ones(2,1) .* cargo_p.dimensions / 2;
+    
+for i = 1:n_agents
+    pos = cargo.relative2absolute(pos_relative(:,i));
+    agents(i) = agent(names(i), pos, agent_p, cargo, map);
+end
 
 robots = flock(agents, cargo, Ts, 0);
 
@@ -138,8 +136,8 @@ for i = 1:SUC_steps
         grid on
         show(map);
         %robots.plotVoronoiTessellationDetailed(3);
-        robots.plot();
-        robots.plotCentroids('Formation');
+        robots.plot(false);
+        %robots.plotCentroids('Formation');
         Ball.plot();
         hold off
 
@@ -175,7 +173,7 @@ for i = 1:steps
     robots.computeVisibilitySets(Ball);
     
     % detached robots have just to stay in connectivity range
-    robots.connectivityMaintenance('Detached', 'All');
+    %robots.connectivityMaintenance('Detached', 'All');
 
     %detached must stay in the box limits
     robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'All');
@@ -253,7 +251,7 @@ for i = 1:steps
         grid on
         show(map);
         %robots.plotVoronoiTessellationDetailed(3);
-        robots.plot();
+        robots.plot(false);
         %robots.plotCentroids('Obstacle');
         %robots.plotCentroids('Formation');
         Ball.plot();
@@ -283,6 +281,7 @@ end
 figure()
 subplot(1,3,1)
     hold on
+    grid on
     title('PD priority')
     set(gcf,'color','w');
     for i = 1:robots.n_agents
@@ -291,6 +290,7 @@ subplot(1,3,1)
     legend 
 subplot(1,3,2)
     hold on
+    grid on
     title('COM priority')
     set(gcf,'color','w');
     for i = 1:robots.n_agents
@@ -299,6 +299,7 @@ subplot(1,3,2)
     legend 
 subplot(1,3,3)
     hold on;
+    grid on
     title('total priority');
     set(gcf,'color','w');
     for i = 1:robots.n_agents
@@ -312,6 +313,7 @@ figure()
 title('driving force');
 set(gcf,'color','w');
 hold on
+grid on
 for i = 1:robots.n_agents
     plot(driving_force_history(:,i), 'DisplayName', string(i));
 end

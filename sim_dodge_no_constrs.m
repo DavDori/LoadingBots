@@ -11,42 +11,54 @@ map_width = map.XLocalLimits(2) - map.XLocalLimits(1);
 map_height = map.YLocalLimits(2) - map.YLocalLimits(1);
 
 % Cargo
-center = [map.XWorldLimits(2) / 2 ; 2 - 1]; % [m]
-center_mass = [0;0];        % [m]
-dimensions = [1.5; 1];      % [m]
-orientation = pi/2;         % [rad]
+center = [map.XWorldLimits(2) / 2 ; map.YWorldLimits(2) / 2]; % [m]
+cargo_p.center_mass = [0;0];        % [m]
+cargo_p.dimensions =  [1.5; 1.5];   % [m]
+cargo_p.orientation = pi/2;         % [rad]
 
 % Agents
-param.range = 2;          % [m] max observable range
-param.comm_range = 5;     % [m] max connection distance
-param.radius = 0.1;         % [m] hitbox of the agent
-param.N_rho = 30;           % division of the radius for discretization
-param.N_phi = 30;           % division of the angle for discretization
+n_agents = 12;               % number of agents
+division_starting_spots = 4; % define the starting areas
+agent_p.range = 2.5;         % [m] max observable range
+agent_p.comm_range = 5;      % [m] max connection distance
+agent_p.radius = 0.05;       % [m] hitbox of the agent
+agent_p.N_rho = 36;          % division of the radius for discretization
+agent_p.N_phi = 36;          % division of the angle for discretization
 
 formation_limit = 0.05;
 
-% ball
-ball_starting_point = [0.5; 0.5];
-ball_r = 0.2; % [m]
-ball_speed = 1;
-ball_direction = deg2rad(10);
+% Ball
+ball_p.init_distance = 2;% [m] distance of the ball location from the center
+ball_p.r = 0.1;          % [m] obstacle radius
+ball_p.speed = 0.2;      % [m/s] obstacle speed
+ball_p.w = deg2rad(1);   % [rad] uncertainty on the obstacle direction
 
-Ts = 5e-2;
-sim_time = 2;
+% Simulation parameters----------------------------------------------------
+video_flag = true;
+steps_per_frame = 4; % take 1 frame every 3 steps of simulation
+
+Ts = 5e-2;         % sampling time
+sim_time = 18;     % total simulation time
+n_sims = 18;       % number of simulations
+
+names = {'Bob', 'Jet', 'Zoe', 'Tim', 'Lue', 'Hari', '007', 'Gaal', 'Tif',...
+    'Hug', 'Mug', 'May'};
 
 kp_formation = 2;
 kp_obstacle = 2;
 offset_cargo = 0.1;
 %% objects initialization
 
-cargo = rect_load(st + center, center_mass, orientation, dimensions);
+cargo = RectangularCargo(st + center, cargo_p.center_mass, cargo_p.orientation,...
+    cargo_p.dimensions);
 
-agents(1) = agent('James', [map.XWorldLimits(2) / 2 + 0.5; 2.5 - 1] + st, param, cargo, map);
-agents(2) = agent('Pluto', [map.XWorldLimits(2) / 2 + 0.5; 1.5 - 1] + st, param, cargo, map);
-agents(3) = agent('Gerlad',[map.XWorldLimits(2) / 2 - 0.5; 1.5 - 1] + st, param, cargo, map);
-agents(4) = agent('Leila', [map.XWorldLimits(2) / 2 - 0.5; 2.5 - 1] + st, param, cargo, map);
-agents(5) = agent('Samuel',[map.XWorldLimits(2) / 2 - 0.5; 2 - 1]   + st, param, cargo, map);
-
+pos_relative = randomStartingPositions(cargo_p.dimensions, division_starting_spots...
+      , n_agents) - ones(2,1) .* cargo_p.dimensions / 2;
+  
+for i = 1:n_agents
+    pos = cargo.relative2absolute(pos_relative(:,i));
+    agents(i) = agent(names(i), pos, agent_p, cargo, map);
+end
 
 robots = flock(agents, cargo, Ts, 0);
 
@@ -54,9 +66,8 @@ ball_v = [cos(ball_direction); sin(ball_direction)] * ball_speed;
 ball = Obstacle(ball_r, ball_starting_point, ball_v, Ts);
 
 %% spread under the cargo
-steps = 80;
-
-robots.spreadUnderCargo(30, 0.2, 1);
+steps = fix(sim_time / Ts);
+SUC_steps = 30;
 
 last_d = zeros(robots.n_agents, 1);
 
@@ -70,7 +81,21 @@ v = VideoWriter('no_constraints.avi');
 v.FrameRate = 10;
 open(v);
 
+% Spread under cargo (first phase)
+disp('Starting: spread under cargo phase');
+for i = 1:SUC_steps
+    loadingBar(i, n_sims, 20, '#');
+    robots.meetNeighbours();
+    robots.computeVisibilitySets(); % no obstacle is present in this phase
+    robots.computeVoronoiTessellationCargo(offset_cargo);
+    robots.applyFarFromCenterMassDensity(5);
+    robots.computeVoronoiCentroids();
+    robots.moveToCentroids(kp_formation);
+
+end
+    
 for i = 1:steps
+    loadingBar(i, n_sims, 20, '#');
     robots.meetNeighbours();
     robots.sendScan(); % send scan
     robots.computeVisibilitySets(ball);
@@ -93,7 +118,7 @@ for i = 1:steps
     show(map);
     %robots.plotVoronoiTessellationDetailed(1);
     robots.plot();
-    robots.plotCentroids();
+    %robots.plotCentroids();
     ball.plot();
     hold off
     

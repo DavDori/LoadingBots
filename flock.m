@@ -4,7 +4,7 @@ classdef flock < handle
     
     properties
         agents agent
-        cargo rect_load
+        cargo RectangularCargo
         n_agents (1,1) double {mustBeNumeric}
         formation_factor (1,1) double {mustBeNumeric}
     end
@@ -248,7 +248,7 @@ classdef flock < handle
             ids = obj.agentSelector(type_AA);
             
             for i = ids
-                obj.agents(i).applyConnectivityMaintenance(type_NB);
+                obj.agents(i).applyConnectivityMaintenance([], type_NB);
             end
         end
         
@@ -725,13 +725,13 @@ classdef flock < handle
         end
         
         
-        function plot(obj)
+        function plot(obj, plot_name)
             % representation in a 2D plane of the agents and the load
             hold on
             axis equal
             obj.cargo.plot('r')
             for a = obj.agents
-                a.plot();
+                a.plot(plot_name);
             end
             hold off
         end
