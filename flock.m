@@ -235,7 +235,23 @@ classdef flock < handle
             end
         end
         
+        function liberalConnectivityMaintenance(obj, type_AA, type_NB)
+            % less strict version of connectivity maintenace that allow for
+            % an agnet to loose a neighbour but not the last one
+            if(nargin < 2)
+                type_AA = 'All';
+            end
+            if(nargin < 3)
+                type_NB = 'All';
+            end
+            ids = obj.agentSelector(type_AA);
+            
+            for i = ids
+                obj.agents(i).applyLiberalConnectivityMaintenance([], type_NB);
+            end
+        end
         
+            
         function connectivityMaintenance(obj, type_AA, type_NB)
             % modify the voronoi cells of every agent corresponding to the specified type,
             % to allow connectivity maintenance
@@ -668,14 +684,13 @@ classdef flock < handle
         end
         
         
-        function pCOM = priorityCOM(obj, k, m, q)
+        function pCOM = priorityCOM(obj, min_p, max_p, max_d_COM)
             % compute the distance from the COM, the closest to 0 the
             % higher, meaning that the agent is a bit useless.
-            % k defines the convergance rate
-            % m defines the amplitude
-            % q defines the offset
+
             d = getDistancesFromCOM(obj);
-            pCOM = q + m * exp(-k * d); 
+            m = (min_p - max_p) / max_d_COM;
+            pCOM = m * d + max_p; 
         end
         
         
@@ -746,12 +761,15 @@ classdef flock < handle
         end
         
         
-        function plotVoronoiTessellationDetailed(obj, step)
+        function plotVoronoiTessellationDetailed(obj, step, ids)
             % plot the Voronoi cells of every robot considering every point
             % of the cell
+            if nargin < 3
+                ids = 1:obj.n_agents;
+            end
             hold on
-            for a = obj.agents
-                a.plotVoronoiCellDetailed(step); 
+            for i = ids
+                obj.agents(i).plotVoronoiCellDetailed(step); 
             end
             hold off
         end
@@ -768,20 +786,23 @@ classdef flock < handle
         end
         
         
-        function plotCentroids(obj, type)
+        function plotCentroids(obj, ids, type)
             hold on
-            for a = obj.agents
-                if(nargin < 2)
-                    c = a.position + a.formation_VC.centroid;
-                    plot([a.position(1), c(1)],[a.position(2), c(2)],'-r');
+            if(isempty(ids) == true)
+                ids = 1:obj.n_agents;
+            end
+            for i = ids
+                if(nargin < 3)
+                    c = obj.agents(i).position + obj.agents(i).formation_VC.centroid;
+                    plot([obj.agents(i).position(1), c(1)],[obj.agents(i).position(2), c(2)],'-r');
                     plot(c(1), c(2), 'ro');
                 elseif(strcmp(type, 'Formation'))
-                    c = a.position + a.formation_VC.centroid;
-                    plot([a.position(1), c(1)],[a.position(2), c(2)],'-r');
+                    c = obj.agents(i).position + obj.agents(i).formation_VC.centroid;
+                    plot([obj.agents(i).position(1), c(1)],[obj.agents(i).position(2), c(2)],'-r');
                     plot(c(1), c(2), 'ro');
                 elseif(strcmp(type, 'Obstacle'))
-                    c = a.position + a.obstacle_VC.centroid;
-                    plot([a.position(1), c(1)],[a.position(2), c(2)],'-b');
+                    c = obj.agents(i).position + obj.agents(i).obstacle_VC.centroid;
+                    plot([obj.agents(i).position(1), c(1)],[obj.agents(i).position(2), c(2)],'-b');
                     plot(c(1), c(2), 'bo');
                 else
                     error(strcat('Error: wrong type: ', type, 'of voronoi cell in plot centroid'))

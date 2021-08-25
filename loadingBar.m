@@ -1,4 +1,4 @@
-function loadingBar(current, final, n_bars, symbol)
+function msg = loadingBar(current, final, n_bars, symbol)
     % represent a loading bar for the simulation
     perc = fix(current / final * 100);
     current_bar = floor(perc * n_bars / 100);
@@ -12,8 +12,6 @@ function loadingBar(current, final, n_bars, symbol)
         filler = strcat(filler, '-');
     end
     
-    msg = strcat(msg, filler, '| ', string(perc));
-    clc;
-    disp(msg);
+    msg = strcat(msg, filler, '| ', string(perc), '%');
 end
 

@@ -186,14 +186,14 @@ classdef agent < handle
         function s = scan(obj, obs)
             % simulate a scan of the nearby area using a lidar sensor. A
             % moving obstacle object can be passed to increase complexity.
+            % moreover, other agents vision occlusion can be considered by
+            % setting their positions with neighbours. Note that it the
+            % last case, the agents are considered with the same radius
+            
             s = zeros(obj.formation_VC.phi_n, 2);
             new_map = binaryOccupancyMap(obj.map); % copy
             if(isempty(obs) == false)
-                obs_map = binaryOccupancyMap(obj.map.XLocalLimits(2), ...
-                                             obj.map.YLocalLimits(2), ...
-                                             obj.map.Resolution);
-                obs_map.setOccupancy(obs.center', 1); 
-                obs_map.inflate(obs.radius);
+                obs_map = addDisksToMap(obj.map, obs.center', obs.radius);
                 syncWith(new_map, obs_map);
             end
             
@@ -264,6 +264,9 @@ classdef agent < handle
         
         function applyConnectivityMaintenance(obj, relax_factor, type)
             % compute the union between the neighbours visibility sets
+            if(isempty(obj.Neighbours_scan) == true)
+                error('agents did not share their scans!');
+            end
             if(nargin < 3)
                 type = 'All';
             end
@@ -273,11 +276,34 @@ classdef agent < handle
             if(nargin > 1 && isempty(relax_factor) == false) 
                 upper_bounds = min(obj.lidar_range, obj.bounds + relax_factor);
             else
-                upper_bounds = obj.lidar_range * ones(size(obj.Neighbours, 2));
+                upper_bounds = obj.lidar_range * ones(1,size(obj.Neighbours, 2));
             end
             % POSSIBLE FIX: iterate for every neighbour outside!!!
             % send only info of the selected neighbours
             obj.formation_VC.unionVisibilitySets(obj.position,...
+                upper_bounds(ids), obj.Neighbours(ids), obj.Neighbours_scan(ids));
+        end
+        
+        
+        function applyLiberalConnectivityMaintenance(obj, relax_factor, type)
+            % a spot has a greater value the more agents share it
+            if(isempty(obj.Neighbours_scan) == true)
+                error('agents did not share their scans!');
+            end
+            if(nargin < 3)
+                type = 'All';
+            end
+            % select agents that satisfy type
+            ids = getTypeIds(type, obj.Neighbours);
+            
+            if(nargin > 1 && isempty(relax_factor) == false) 
+                upper_bounds = min(obj.lidar_range, obj.bounds + relax_factor);
+            else
+                upper_bounds = obj.lidar_range * ones(1,size(obj.Neighbours, 2));
+            end
+            % POSSIBLE FIX: iterate for every neighbour outside!!!
+            % send only info of the selected neighbours
+            obj.formation_VC.voteVisibilitySets(obj.position,...
                 upper_bounds(ids), obj.Neighbours(ids), obj.Neighbours_scan(ids));
         end
         
