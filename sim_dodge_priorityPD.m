@@ -7,7 +7,8 @@ clc
 
 st = [0;0]; % starting position offset (applied to agents and cargo)
 % map
-map = png2BOMap('map_test_1.png',22);
+map_res = 150; % map_test_1 : 22
+map = png2BOMap('map_test_3_high_res.png', map_res);
 map_width = map.XLocalLimits(2) - map.XLocalLimits(1);
 map_height = map.YLocalLimits(2) - map.YLocalLimits(1);
 
@@ -18,27 +19,27 @@ cargo_p.dimensions =  [1.5; 1.5];   % [m]
 cargo_p.orientation = pi / 2;       % [rad]
 
 % Agents
-n_agents = 20;               % number of agents
-division_starting_spots = 5; % define the starting areas
-agent_p.range = 2.0;         % [m] max observable range
-agent_p.comm_range = 5;      % [m] max connection distance
+n_agents = 8;               % number of agents
+division_starting_spots = 3; % define the starting areas
+agent_p.range = 1.8;         % [m] max observable range
+agent_p.comm_range = 1.8;      % [m] max connection distance
 agent_p.radius = 0.05;       % [m] hitbox of the agent
-agent_p.N_rho = 15;          % division of the radius for discretization
-agent_p.N_phi = 36;          % division of the angle for discretization
+agent_p.N_rho = 60;          % division of the radius for discretization
+agent_p.N_phi = 60;          % division of the angle for discretization
 
 % Ball
 ball_p.init_angle = 0;  % [rad] angle at which the ball is located wtr the center
-ball_p.init_distance = 2; % [m] distance of the ball location from the center
+ball_p.init_distance = 1.5; % [m] distance of the ball location from the center
 ball_p.r = 0.1;           % [m] obstacle radius
 ball_p.speed = 0.2;       % [m/s] obstacle speed
-ball_p.w = deg2rad(10);    % [rad] uncertainty on the obstacle direction
+ball_p.w = deg2rad(5);    % [rad] uncertainty on the obstacle direction
 
 % Simulation parameters----------------------------------------------------
 video_flag = true;
 steps_per_frame = 4; % take 1 frame every 3 steps of simulation
 
 Ts = 5e-2;         % sampling time
-sim_time = 18;     % total simulation time
+sim_time = 16;     % total simulation time
 slow_factor = 1;   % x1 speed of visualization
 
 % Centroids gains ---------------------------------------------------------
@@ -56,18 +57,17 @@ hold_positions_factor = 0.5;
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.2; % attach threshold
+param_at.th = 0.15; % attach threshold
 
 % detaching
-param_dt.th = 0.12; % thershold for detaching
+param_dt.th = 0.10; % thershold for detaching
 
 % prioirty
 Kp = 0.5; % importance of obstacle distance in priority
-Kd = 0.5;   % importance of obstacle velocity in priority
+Kd = 0.8;   % importance of obstacle velocity in priority
 
-alpha_COM = 5; % convergance rate of the priority on center of mass distance
-K_COM = param_dt.th * 2;  % importance of the priority on center of mass distance
-offset_COM = -param_dt.th;
+min_p_COM = 0;                 % min priority bonus due to distance form COM
+max_p_COM = param_dt.th * 0.5; % max priority bonus due to distance form COM
 
 
 %% objects initialization
@@ -93,7 +93,7 @@ end
 robots = flock(agents, cargo, Ts, 0);
 
 % obstacle movement direction
-ball_p.dir = pi + ball_p.init_angle + rand(1) * deg2rad(ball_p.w); 
+ball_p.dir = pi + ball_p.init_angle + randn(1) * ball_p.w; 
 ball_p.init_point = center + ball_p.init_distance *...
                      [cos(ball_p.init_angle); sin(ball_p.init_angle)];
                  
@@ -118,9 +118,13 @@ end
 %% Spread under cargo (first phase)
 
 for i = 1:SUC_steps
-    loadingBar(i, SUC_steps, 20, '#');
+    clc;
+    bar = loadingBar(i, SUC_steps, 20, '#');
+    disp(bar);
     robots.meetNeighbours();
+    robots.sendScan([]); 
     robots.computeVisibilitySets(); % no obstacle is present in this phase
+    %robots.connectivityMaintenance('All', 'All');
     robots.computeVoronoiTessellationCargo(offset_cargo);
     robots.applyFarFromCenterMassDensity(5);
     robots.computeVoronoiCentroids();
@@ -135,8 +139,7 @@ for i = 1:SUC_steps
         axis equal
         grid on
         show(map);
-        %robots.plotVoronoiTessellationDetailed(3);
-        robots.plot(false);
+        robots.plot(n_agents < 10);
         %robots.plotCentroids('Formation');
         Ball.plot();
         hold off
@@ -155,15 +158,17 @@ disp('Spread under cargo phase concluded...');
 robots.attach();
 % set positions to hold
 hold_positions = robots.getAgentsPositions('All');
-% initialize the obstacle distances for PD priority with the maximunm value
-last_d = zeros(robots.n_agents, 1) * agent_p.range; % set to 0
+% initialize the obstacle centroid distances for PD priority with the maximunm value
+last_d = zeros(robots.n_agents, 1); % set to 0
 
 priority_PD_history   = zeros(steps, robots.n_agents);
 priority_COM_history  = zeros(steps, robots.n_agents);
 driving_force_history = zeros(steps, robots.n_agents);
 
 for i = 1:steps
-    loadingBar(i, steps, 20, '#');
+    clc;
+    bar = loadingBar(i, steps, 20, '#');
+    disp(bar);
     
     robots.meetNeighbours();
     robots.sendScan(Ball); 
@@ -173,12 +178,12 @@ for i = 1:steps
     robots.computeVisibilitySets(Ball);
     
     % detached robots have just to stay in connectivity range
-    %robots.connectivityMaintenance('Detached', 'All');
+    robots.connectivityMaintenance('Detached', 'All');
 
     %detached must stay in the box limits
     robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'All');
     % otherwise use
-    % robots.computeVoronoiTessellation('Detached', 'Detached');
+    %robots.computeVoronoiTessellation('Detached', 'All');
     
     robots.applyConstantDensity('Obstacle');
     
@@ -195,9 +200,10 @@ for i = 1:steps
     [priorityPD, new_d] = robots.priorityPD(Kp, Kd, last_d);
     % compute the priority in function of the distance from the center of
     % mass of the cargo
-    priorityCOM = robots.priorityCOM(alpha_COM, K_COM, offset_COM);
+    priorityCOM = robots.priorityCOM(min_p_COM, max_p_COM, max(cargo.dimension));
 
-    priority = priorityPD + priorityCOM;
+    %priority = priorityPD + priorityCOM;
+    priority = priorityPD;
     
     priority_PD_history(i,:) = priorityPD;
     priority_COM_history(i,:) = priorityCOM;
@@ -242,6 +248,8 @@ for i = 1:steps
     robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
     Ball.move();
     
+    ids_at = robots.getAttached();
+    ids_dt = robots.getDetached();
     if(video_flag == true && rem(i, steps_per_frame) == 0)
         % video setup
         hold on         
@@ -250,9 +258,9 @@ for i = 1:steps
         axis equal
         grid on
         show(map);
-        %robots.plotVoronoiTessellationDetailed(3);
-        robots.plot(false);
-        %robots.plotCentroids('Obstacle');
+        robots.plotVoronoiTessellationDetailed(2, ids_dt);
+        robots.plot(n_agents < 10);
+        robots.plotCentroids(ids_at, 'Obstacle');
         %robots.plotCentroids('Formation');
         Ball.plot();
         hold off
@@ -285,7 +293,7 @@ subplot(1,3,1)
     title('PD priority')
     set(gcf,'color','w');
     for i = 1:robots.n_agents
-        plot(priority_PD_history(:,i),'DisplayName', string(i));
+        stairs(priority_PD_history(:,i),'DisplayName', string(robots.agents(i).name));
     end
     legend 
 subplot(1,3,2)
@@ -294,7 +302,7 @@ subplot(1,3,2)
     title('COM priority')
     set(gcf,'color','w');
     for i = 1:robots.n_agents
-        plot(priority_COM_history(:,i),'DisplayName', string(i));
+        stairs(priority_COM_history(:,i),'DisplayName', string(robots.agents(i).name));
     end
     legend 
 subplot(1,3,3)
@@ -303,9 +311,11 @@ subplot(1,3,3)
     title('total priority');
     set(gcf,'color','w');
     for i = 1:robots.n_agents
-        plot(priority_COM_history(:,i) + priority_PD_history(:,i), 'DisplayName', string(i));
+        stairs(priority_COM_history(:,i) + priority_PD_history(:,i), ...
+            'DisplayName', string(robots.agents(i).name));
     end
-    plot([1,size(priority_COM_history,1)], [param_dt.th,param_dt.th],'r', 'DisplayName', 'Detach limit'); 
+    stairs([1,size(priority_COM_history,1)], [param_dt.th,param_dt.th],'r',...
+        'DisplayName', 'Detach limit'); 
     legend; 
 
     
@@ -315,7 +325,7 @@ set(gcf,'color','w');
 hold on
 grid on
 for i = 1:robots.n_agents
-    plot(driving_force_history(:,i), 'DisplayName', string(i));
+    stairs(driving_force_history(:,i), 'DisplayName', string(robots.agents(i).name));
 end
 plot([1,size(driving_force_history,1)], [param_at.th,param_at.th],'r','DisplayName', 'Attach limit'); 
 legend; 

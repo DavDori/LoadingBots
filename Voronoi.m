@@ -91,6 +91,54 @@ classdef Voronoi < handle
         end
         
         
+        function voteVisibilitySets(obj, pos, range_max, Neighbours, Neighbours_scans)
+            % takes the visibility set that has to be already computed and
+            % intersects it with the visibility set of the neighbours, the
+            % more a point is shared between agents, the higher its value
+            % NOTE: lidar range assumed to be the same for each agent
+            val = 1 / length(Neighbours);
+            tmp_cell = obj.visibility_set;
+            % for every point 
+            for i = 1:obj.rho_n % for every angle
+                for j = 1:obj.phi_n % for some radius
+                    if(obj.visibility_set(i,j) == 1)
+                        % compute the point in the absolute ref. frame
+                        rho = i * obj.rho_res;
+                        phi = j * obj.phi_res;
+                        [x, y] = polar2cartesian(rho, phi);
+                        point = [x; y] + pos;
+                        for k = 1:length(Neighbours_scans) % for every scan
+                            % transfers the coordinates to the
+                            % reference frame of the Neighbour
+                            q = point - Neighbours(k).position';
+                            dist = sqrt(q'*q); % distance between point and neighbour
+                            if(dist > range_max(k))
+                                tmp_cell(i,j) = 0;
+                                break;
+                            else
+                                % assumption: every neighbour discretize
+                                % the area in the same way.
+                                % angle has to in 0 and 2pi
+                                angle = change_piTo2pi(atan2(q(2),q(1)));
+                                % find the curesponding index
+                                index = obj.getAngleIndex(angle);
+                                measured_rho = Neighbours_scans(k).scan(index, 1);
+                                if(measured_rho < dist) % point is outside the visibility set of the neighbour
+                                    % the value is reduced by val for every
+                                    % neighbour that don't share that point
+                                    % of the cell
+                                    tmp_cell(i,j) = tmp_cell(i,j) - val;
+                                    break
+                                end
+                            end
+                        end
+                        
+                    end
+                end
+            end
+            obj.visibility_set = tmp_cell;
+        end
+        
         
         function computeCell(obj, pos, Neighbours, min_agents_dist)
             if(isempty(obj.visibility_set))
@@ -102,7 +150,7 @@ classdef Voronoi < handle
             % for every point 
             for i = 1:obj.rho_n % for every angle
                 for j = 1:obj.phi_n % for some radius
-                    if(obj.visibility_set(i,j) == 1)
+                    if(obj.visibility_set(i,j) > 0)
                         % compute the point in the absolute ref. frame
                         inside = obj.pointDomain(i, j, pos, Neighbours, min_agents_dist);
                         if(inside == false)
@@ -197,10 +245,10 @@ classdef Voronoi < handle
             % for every point apply the density function
             for i = 1:obj.phi_n % for every angle
                 for j = 1:obj.rho_n % for some radius
-                    if(obj.visibility_set(j,i) == 1)
+                    if(obj.visibility_set(j,i) > 0)
                         rho = j * obj.rho_res;
                         phi = i * obj.phi_res;
-                        tmp_cell(j,i) = fun_d(rho, phi);
+                        tmp_cell(j,i) = fun_d(rho, phi) * obj.visibility_set(j,i);
                     end
                 end
             end
