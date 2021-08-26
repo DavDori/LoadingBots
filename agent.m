@@ -16,6 +16,7 @@ classdef agent < handle
         Ts (1,1) double {mustBeNumeric} % sampling time
         comm_range (1,1) double {mustBeNumeric} % max range to an agent that enables communication
         lidar_range (1,1) double {mustBeNumeric} % max distance at which an obstacle can be detected
+        max_speed (1,1) double {mustBeNumeric} % [m/s] maximum speed reachable by the agent
         
         msg_in % recived message
         Neighbours % positions and names of in range agents
@@ -38,6 +39,8 @@ classdef agent < handle
             obj.dimension = param.radius;
             obj.comm_range = param.comm_range;
             obj.lidar_range = param.range;
+            obj.max_speed = param.max_speed;
+            
             obj.attached = false; % starts as unattached
             obj.msg_in = [];
             obj.Neighbours = [];
@@ -145,8 +148,14 @@ classdef agent < handle
         
         % METHODS: actions
         
-        function move(obj, velocity) 
-            % compute the position at the next integration step               
+        function move(obj, input_velocity) 
+            % compute the position at the next integration step.
+            % Saturation of speed
+            if(obj.max_speed > input_velocity)
+                velocity = input_velocity;
+            else
+                velocity = obj.max_speed;
+            end
             if(size(velocity, 2) ~= 1)
                 obj.position = obj.position + obj.Ts * velocity';
             else
@@ -192,8 +201,9 @@ classdef agent < handle
             
             s = zeros(obj.formation_VC.phi_n, 2);
             new_map = binaryOccupancyMap(obj.map); % copy
+            tmp_map = binaryOccupancyMap(obj.map); % copy
             if(isempty(obs) == false)
-                obs_map = addDisksToMap(obj.map, obs.center', obs.radius);
+                obs_map = addDisksToMap(obj.map, obs.center, obs.radius);
                 syncWith(new_map, obs_map);
             end
             

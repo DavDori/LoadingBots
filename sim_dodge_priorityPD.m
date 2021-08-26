@@ -24,11 +24,12 @@ division_starting_spots = 3; % define the starting areas
 agent_p.range = 1.8;         % [m] max observable range
 agent_p.comm_range = 1.8;      % [m] max connection distance
 agent_p.radius = 0.05;       % [m] hitbox of the agent
-agent_p.N_rho = 60;          % division of the radius for discretization
-agent_p.N_phi = 60;          % division of the angle for discretization
+agent_p.N_rho = 50;          % division of the radius for discretization
+agent_p.N_phi = 50;          % division of the angle for discretization
+agent_p.max_speed = 0.5;     % [m/s] maximum speed reachable by the agent
 
 % Ball
-ball_p.init_angle = 0;  % [rad] angle at which the ball is located wtr the center
+ball_p.init_angle = pi/4;  % [rad] angle at which the ball is located wtr the center
 ball_p.init_distance = 1.5; % [m] distance of the ball location from the center
 ball_p.r = 0.1;           % [m] obstacle radius
 ball_p.speed = 0.2;       % [m/s] obstacle speed
@@ -43,10 +44,9 @@ sim_time = 16;     % total simulation time
 slow_factor = 1;   % x1 speed of visualization
 
 % Centroids gains ---------------------------------------------------------
-% consider that the formation cell is always included in the obstacle
-% Voroni cell
-kp_formation = 1.5;   % formation centroid gain
-kp_obstacle = 0.2;    % obstacle centroid gain
+
+kp_formation = 6;   % formation centroid gain
+kp_obstacle = 0.5;    % obstacle centroid gain
 
 SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
@@ -60,10 +60,10 @@ param_at.Kobs = 1;
 param_at.th = 0.15; % attach threshold
 
 % detaching
-param_dt.th = 0.10; % thershold for detaching
+param_dt.th = 0.08; % thershold for detaching
 
 % prioirty
-Kp = 0.5; % importance of obstacle distance in priority
+Kp = 0.6; % importance of obstacle distance in priority
 Kd = 0.8;   % importance of obstacle velocity in priority
 
 min_p_COM = 0;                 % min priority bonus due to distance form COM
@@ -166,9 +166,9 @@ priority_COM_history  = zeros(steps, robots.n_agents);
 driving_force_history = zeros(steps, robots.n_agents);
 
 for i = 1:steps
-    clc;
-    bar = loadingBar(i, steps, 20, '#');
-    disp(bar);
+    %clc;
+    %bar = loadingBar(i, steps, 20, '#');
+    %disp(bar);
     
     robots.meetNeighbours();
     robots.sendScan(Ball); 
@@ -178,12 +178,13 @@ for i = 1:steps
     robots.computeVisibilitySets(Ball);
     
     % detached robots have just to stay in connectivity range
-    robots.connectivityMaintenance('Detached', 'All');
-
+    %robots.connectivityMaintenance('Detached', 'All');
+    robots.liberalConnectivityMaintenance('Detached', 'All');
+    
     %detached must stay in the box limits
-    robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'All');
+    %robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'All');
     % otherwise use
-    %robots.computeVoronoiTessellation('Detached', 'All');
+    robots.computeVoronoiTessellation('Detached', 'All');
     
     robots.applyConstantDensity('Obstacle');
     
@@ -202,8 +203,7 @@ for i = 1:steps
     % mass of the cargo
     priorityCOM = robots.priorityCOM(min_p_COM, max_p_COM, max(cargo.dimension));
 
-    %priority = priorityPD + priorityCOM;
-    priority = priorityPD;
+    priority = priorityPD + priorityCOM;
     
     priority_PD_history(i,:) = priorityPD;
     priority_COM_history(i,:) = priorityCOM;
@@ -212,32 +212,19 @@ for i = 1:steps
     ids_detachable = robots.detachable();
     ids_attachable = robots.attachable();
 
-    % calculate the centroid module for both attachable and detachable
+    % calculate the centroid module for both attachable condition
     [m_obs_attach, m_for_attach] = robots.centroidsModule(1:robots.n_agents);
-   
-    if(isempty(ids_detachable) == false) % there is at least a robot that can detach
-        % select the one with higher priority. One agent at the time can
-        % detach
-        [val_detach, id_rel] = max(priority(ids_detachable));
-        id_abs = ids_detachable(id_rel); % get the absolute id of the agent
-        
-        if(val_detach > param_dt.th)
-            robots.detach(id_abs);
-        end
-    end
-    
     drive_force = m_obs_attach + m_for_attach;
     driving_force_history(i,:) = drive_force;
     
-    if(isempty(ids_attachable) == false) % there is at least a robot that can detach
-        
-        % select agents that have a drive force smaller than the threshold,
-        % meaning they are close to an equilibrium
-        for j = ids_attachable
-            if(drive_force(j) < param_at.th)
-                robots.attach(j);
-            end
-        end
+    [id_detachable] = detachRobotPriority(ids_detachable, priority, param_dt.th);
+    if(isempty(id_detachable) == false)
+        robots.detach(id_detachable);
+    end
+    [ids_equilibirum] = attachRobotEquilibrium(ids_attachable, drive_force,...
+                        priority, param_at.th, param_dt.th);
+    if(isempty(ids_equilibirum) == false)
+        robots.attach(ids_equilibirum);
     end
     
     % next step of simulation
@@ -258,10 +245,10 @@ for i = 1:steps
         axis equal
         grid on
         show(map);
-        robots.plotVoronoiTessellationDetailed(2, ids_dt);
+        robots.plotVoronoiTessellationDetailed(3, ids_dt);
         robots.plot(n_agents < 10);
-        robots.plotCentroids(ids_at, 'Obstacle');
-        %robots.plotCentroids('Formation');
+        %robots.plotCentroids(ids_at, 'Obstacle');
+        robots.plotCentroids(ids_dt, 'Formation');
         Ball.plot();
         hold off
 
