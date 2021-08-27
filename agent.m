@@ -353,6 +353,25 @@ classdef agent < handle
         end
         
         
+        function applyVoronoiPointDensityLocal(obj, point, sf)
+            % apply the density function of an exponential centerd in the
+            % point position. The point is defined in the global refernce
+            % frame and if not inside the circle of radius the lidar range,
+            % the point is set on the boarder in the direction of the 
+            % original one.
+            % NOTE: sf is the spread factor
+            distance = distance2D(point, obj.position);
+            direction = (point - obj.position) / distance;
+            if(distance > obj.lidar_range)
+                % set the position of the point on the boarder
+                point_updated = obj.position - direction * obj.lidar_range;
+            else
+                point_updated = point;
+            end
+            applyVoronoiPointDensity(obj, point_updated, sf);
+        end
+        
+        
         function applyVoronoiWayPointDensity(obj, sf)
             % apply the density function of an exponential centerd in the
             % way point
