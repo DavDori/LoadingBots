@@ -341,6 +341,22 @@ classdef flock < handle
         end
         
         
+        function applyMultiplePointsDensityLocal(obj, points, sf, type)
+            % for every robot apply an exponential density function
+            % centered on a point which is given as input. 'sf' is the
+            % spread factor of the point
+            if(nargin < 4)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
+                obj.agents(i).applyVoronoiPointDensityLocal(points(i,:), sf);
+            end
+        end
+        
+        
         function applySinglePointDensity(obj, point, sf, type)
             % for every robot apply an exponential density function
             % centered on a common point on the voronoi cell. 'sf' is the
@@ -355,6 +371,23 @@ classdef flock < handle
                 obj.agents(i).applyVoronoiPointDensity(point, sf);
             end
         end
+        
+        
+        function applySinglePointDensityLocal(obj, point, sf, type)
+            % for every robot apply an exponential density function
+            % centered on a common point on the voronoi cell. 'sf' is the
+            % spread factor of the point
+            if(nargin < 4)
+                ids = obj.agentSelector('All');
+            else
+                ids = obj.agentSelector(type);
+            end
+            
+            for i = ids
+                obj.agents(i).applyVoronoiPointDensityLocal(point, sf);
+            end
+        end
+        
         
         function applyConstantDensity(obj, type_cell, type_agents)
             % for every robot apply a constant density at its Voronoi cell
@@ -695,6 +728,9 @@ classdef flock < handle
         
         
         function [m_obs, m_for] = centroidsModule(obj, ids)
+            if(isempty(ids) == true)
+                ids = 1:obj.n_agents;
+            end
             m_obs = zeros(size(ids'));
             m_for = zeros(size(ids'));
             n = 0;
@@ -740,13 +776,13 @@ classdef flock < handle
         end
         
         
-        function plot(obj, plot_name)
+        function plot(obj, plot_name_flag)
             % representation in a 2D plane of the agents and the load
             hold on
             axis equal
             obj.cargo.plot('r')
             for a = obj.agents
-                a.plot(plot_name);
+                a.plot(plot_name_flag);
             end
             hold off
         end

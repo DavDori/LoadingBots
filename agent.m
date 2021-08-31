@@ -364,7 +364,7 @@ classdef agent < handle
             direction = (point - obj.position) / distance;
             if(distance > obj.lidar_range)
                 % set the position of the point on the boarder
-                point_updated = obj.position - direction * obj.lidar_range;
+                point_updated = obj.position + direction * obj.lidar_range;
             else
                 point_updated = point;
             end
@@ -495,7 +495,7 @@ classdef agent < handle
         
         % METHODS: representation -----------------------------------------
         
-        function plot(obj, plot_name) 
+        function plot(obj, plot_name_flag) 
             % represent the agent on a 2D plain in red if free to move, in 
             % blue if attached
             hold on
@@ -511,7 +511,7 @@ classdef agent < handle
             else
                 status = '(D)';
             end
-            if(plot_name == true)
+            if(plot_name_flag == true)
                 text(obj.position(1) + offset, obj.position(2), strcat(obj.name, status));
             end
             hold off

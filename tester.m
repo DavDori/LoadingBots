@@ -27,12 +27,14 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 90;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
             
             center = [2 ; 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             agents(1) = agent('001', [2; 2.5], param_test, cargo, obj.map);
             robot_flock = flock(agents, cargo, obj.Ts, 0);
@@ -62,13 +64,15 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             param_test.range = 1;          % [m] max observable range
             param_test.comm_range = 1.2;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 90;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
             
             agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
             
@@ -125,7 +129,7 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
             param_test.range = 1;          % [m] max observable range
@@ -133,6 +137,8 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 30;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
             dist = param_test.radius * 1.1;
             agents(1) = agent('001', [2 + dist; 0], param_test, cargo, obj.map);
             agents(2) = agent('002', [2 - dist; 0], param_test, cargo, obj.map);
@@ -183,9 +189,10 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 140;           % division of the radius for discretization
             param_test.N_phi = 140;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             % cargo has to be a rectangle
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             vertex = computeVertexPositions(cargo); 
             % set the agent at 1 vertex
             agents(1) = agent('001', vertex(1,:), param_test, cargo, obj.map);
@@ -211,13 +218,14 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             param_test.range = 1;          % [m] max observable range
             param_test.comm_range = 1.2;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 45;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
             
@@ -261,8 +269,9 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 60;           % division of the radius for discretization
             param_test.N_phi = 90;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             pos = cargo.center;
             agents(1) = agent('001', pos , param_test, cargo, obj.map);
             pos = pos - [0; param_test.range / 2]; % in range of 1
@@ -294,8 +303,9 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 40;           % division of the radius for discretization
             param_test.N_phi = 40;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             pos = center + [0; 0.6];
             agents(1) = agent('001', pos, param_test, cargo, map_cm);
             pos = center - [-0.5; 0.2]; % in range of 1
@@ -338,7 +348,9 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 60;           % division of the radius for discretization
             param_test.N_phi = 90;           % division of the angle for discretization
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             agents(1) = agent('001', [obj.map.XWorldLimits(2) / 2 + 0.5; 2.5], param_test, cargo, obj.map);
             agents(2) = agent('002', [obj.map.XWorldLimits(2) / 2 + 0.5; 1.5], param_test, cargo, obj.map);
@@ -402,7 +414,7 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
             param_test.range = 2.5;          % [m] max observable range
@@ -410,6 +422,7 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 100;           % division of the radius for discretization
             param_test.N_phi = 100;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             agents(1) = agent('001', [2+1; 2 + 0], param_test, cargo, map_cm);
             agents(2) = agent('002', [2-1; 2 + 0], param_test, cargo, map_cm);
@@ -472,7 +485,7 @@ classdef tester
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
             param_test.range = 1;          % [m] max observable range
@@ -480,6 +493,8 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
             ts = 0.1;
             agents = agent('001', center, param_test, cargo, map_cm);
             robot_flock = flock(agents, cargo, ts, 0);
@@ -526,7 +541,7 @@ classdef tester
             center_mass = [0;0];      % [m]
             dimensions = [2; 2];      % [m]
             orientation = pi/2;       % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
             param_test.range = 1;          % [m] max observable range
@@ -534,6 +549,8 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
             ts = 0.1;
             steps = 10;
             Kp = 2;
@@ -588,7 +605,7 @@ classdef tester
             center_mass = [0;0];      % [m]
             dimensions = [2; 2];      % [m]
             orientation = pi/2;       % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
             param_test.range = 1;          % [m] max observable range
@@ -596,6 +613,8 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
             ts = 0.1;
             steps = 10;
             Kp = 1;
@@ -646,7 +665,7 @@ classdef tester
             center_mass = [0; 0];       % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi / 2;       % [rad]
-            cargo = rect_load(center, center_mass, orientation, dimensions);
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
             param_test.range = 2;          % [m] max observable range
@@ -654,6 +673,7 @@ classdef tester
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             agents(1) = agent('001', [1.5; 2.1], param_test, cargo, map_cm);
             agents(2) = agent('002', [1.5; 0.9], param_test, cargo, map_cm);
@@ -673,38 +693,59 @@ classdef tester
                 open(v);
                 
             end
+        end
             
-            %centroid = zeros(steps, 2);
-            for i = 1:steps
-                robot_flock.meetNeighbours(); % meat neighbours
-                robot_flock.sendScan(); % send scan
-                robot_flock.computeVisibilitySets(ball);
-                robot_flock.connectivityMaintenance();
-                robot_flock.computeVoronoiTessellation();
-                robot_flock.applyConstantDensity();
-                robot_flock.computeVoronoiCentroids();
-                robot_flock.moveToCentroids(2);
-                ball.move();
+            
+        function flag_success = pointDensityLocal(obj, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0; 0];       % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi / 2;       % [rad]
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 0.5;          % [m] max observable range
+            param_test.comm_range = 0.5;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
+            agents(1) = agent('001', [1.5; 1], param_test, cargo, map_cm);
+            agents(2) = agent('002', [2.5; 1], param_test, cargo, map_cm);
+            point = [1.5; 2];
+            sf = 0.4;
+            
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
+            
+            
+            robot_flock.meetNeighbours(); % meat neighbours
+            robot_flock.sendScan(); % send scan
+            robot_flock.computeVisibilitySets();
+            
+            robot_flock.applyConstantDensity('Obstacle');
+            robot_flock.applySinglePointDensityLocal(point, sf);
 
-                if(flag_plot == true)
-                    hold on
-                    
-                    xlim([0,4]);
-                    ylim([0,4]);
-                    show(map_cm);
-                    robot_flock.plotVoronoiTessellationDetailed(2);
-                    robot_flock.plotCentroids();
-                    ball.plot();
-                    hold off
-                    GIF(i) = getframe;
-                    clf(h);
-                    writeVideo(v, GIF(i));
-                end
-                %centroid(i,:) = robot_flock.agents(2).formation_VC.centroid;
+            robot_flock.computeVoronoiCentroids();
+            centroids_modules = robot_flock.centroidsModule([]);
+            if(flag_plot == true)
+                figure();
+                hold on;
+                show(map_cm);
+                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plot(true);
+                robot_flock.plotCentroids([],'Formation');
             end
-            h.Visible = 'on';
-            movie(GIF,1,22);
-            close(v);
+            if(centroids_modules(1) == centroids_modules(2))
+                flag_success = true;
+            else
+                flag_success = false;
+            end
         end
         
         

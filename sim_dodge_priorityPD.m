@@ -52,7 +52,7 @@ SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
 
 bound = 0.05; % buonds to keep when in formation
-hold_positions_factor = 0.5;
+hold_positions_factor = 0.8;
 
 % attaching 
 param_at.Kfor = 1;
@@ -166,9 +166,9 @@ priority_COM_history  = zeros(steps, robots.n_agents);
 driving_force_history = zeros(steps, robots.n_agents);
 
 for i = 1:steps
-    %clc;
-    %bar = loadingBar(i, steps, 20, '#');
-    %disp(bar);
+    clc;
+    bar = loadingBar(i, steps, 20, '#');
+    disp(bar);
     
     robots.meetNeighbours();
     robots.sendScan(Ball); 
@@ -189,9 +189,8 @@ for i = 1:steps
     robots.applyConstantDensity('Obstacle');
     
     % all robots should tend to return to the original position under cargo
-    robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All');
+    robots.applyMultiplePointsDensityLocal(hold_positions, hold_positions_factor, 'All');
     % add 
-    %robots.applyFarFromCenterMassDensity(2, 'Detached');
     
     robots.computeVoronoiCentroids();
     
@@ -216,16 +215,7 @@ for i = 1:steps
     [m_obs_attach, m_for_attach] = robots.centroidsModule(1:robots.n_agents);
     drive_force = m_obs_attach + m_for_attach;
     driving_force_history(i,:) = drive_force;
-    
     [id_detachable] = detachRobotPriority(ids_detachable, priority, param_dt.th);
-    if(isempty(id_detachable) == false)
-        robots.detach(id_detachable);
-    end
-    [ids_equilibirum] = attachRobotEquilibrium(ids_attachable, drive_force,...
-                        priority, param_at.th, param_dt.th);
-    if(isempty(ids_equilibirum) == false)
-        robots.attach(ids_equilibirum);
-    end
     
     % next step of simulation
     % follows the vectorial sum of both vectors defined by the centroids.
@@ -234,6 +224,9 @@ for i = 1:steps
     % weight
     robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
     Ball.move();
+    
+    
+    
     
     ids_at = robots.getAttached();
     ids_dt = robots.getDetached();
@@ -247,7 +240,7 @@ for i = 1:steps
         show(map);
         robots.plotVoronoiTessellationDetailed(3, ids_dt);
         robots.plot(n_agents < 10);
-        %robots.plotCentroids(ids_at, 'Obstacle');
+        robots.plotCentroids(ids_at, 'Obstacle');
         robots.plotCentroids(ids_dt, 'Formation');
         Ball.plot();
         hold off
@@ -255,6 +248,15 @@ for i = 1:steps
         frm = getframe(gcf);
         clf(h);
         writeVideo(v, frm);
+    end
+    
+    if(isempty(id_detachable) == false)
+        robots.detach(id_detachable);
+    end
+    [ids_equilibirum] = attachRobotEquilibrium(ids_attachable, drive_force,...
+                        priority, param_at.th, param_dt.th);
+    if(isempty(ids_equilibirum) == false)
+        robots.attach(ids_equilibirum);
     end
     
     last_d = new_d;
