@@ -276,15 +276,21 @@ classdef flock < handle
             centroids = zeros(obj.n_agents, 2);
             if(nargin < 2)
                 for i = 1:obj.n_agents
-                    centroids(i,1:2) = obj.agents(i).getFormationCentroid();
+                    centroids(i, 1:2) = obj.agents(i).getFormationCentroid();
                 end
             elseif(strcmp(type, 'Formation'))
                 for i = 1:obj.n_agents
-                    centroids(i,1:2) = obj.agents(i).getFormationCentroid();
+                    centroids(i, 1:2) = obj.agents(i).getFormationCentroid();
                 end
             elseif(strcmp(type, 'Obstacle'))
                 for i = 1:obj.n_agents
-                    centroids(i,1:2) = obj.agents(i).getObstacleCentroid();
+                    centroids(i, 1:2) = obj.agents(i).getObstacleCentroid();
+                end
+            elseif(strcmp(type, 'Both'))
+                centroids = zeros(obj.n_agents, 4); % redefine and change size
+                for i = 1:obj.n_agents
+                    centroids(i, 1:2) = obj.agents(i).getFormationCentroid();
+                    centroids(i, 3:4) = obj.agents(i).getObstacleCentroid();
                 end
             else
                 error(strcat('Error: wrong type: ', type, 'of voronoi cell selected'))

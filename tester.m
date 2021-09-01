@@ -677,6 +677,15 @@ classdef tester
             ball = Obstacle(0.2, [0; 0.9], [1; 0], obj.Ts / 2);
             
             steps = 50;
+            for i = 1:steps
+                robot_flock.computeVisibilitySets(ball);
+                robot_flock.applyConstantDensity('Obstacle');
+                robot_flock.applyConstantDensity('Formation');
+                robot_flock.computeVoronoiCentroids();
+                ball.move();
+                last_d = new_d; % updates the distances for the derivative term
+            end
+            
             if(flag_plot == true)
                 h = figure();
                 h.Visible = 'off';
@@ -687,6 +696,110 @@ classdef tester
                 v = VideoWriter('obs_avoid.avi');
                 open(v);
                 
+            end
+        end
+        
+        
+        function effectiveCentoridTest(obj, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0; 0];       % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi / 2;       % [rad]
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 2;          % [m] max observable range
+            param_test.comm_range = 3;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
+            hold_positions_factor = 0.5;
+            hold_positions = [1.5, 3; 1.8, 1; 2.0, 0.9];
+            
+            agents(1) = agent('001', [1.75; 2.1], param_test, cargo, map_cm);
+            agents(2) = agent('002', [1.5; 0.9], param_test, cargo, map_cm);
+            agents(3) = agent('003', [2.5; 0.9], param_test, cargo, map_cm);
+            
+            robot_flock = flock(agents, cargo, obj.Ts / 2, 0);
+            
+            robot_flock.meetNeighbours();
+            robot_flock.sendScan(); 
+            robot_flock.computeVisibilitySets();
+            robot_flock.connectivityMaintenance('All', 'All');
+            robot_flock.computeVoronoiTessellation('All', 'All');
+            robot_flock.applyConstantDensity('Obstacle');
+            robot_flock.applyConstantDensity('Formation');
+            %robot_flock.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All'); 
+            centroids = robot_flock.computeVoronoiCentroids('Both');
+            
+            if(flag_plot == true)
+                figure();
+                axis equal
+                grid on
+                show(map_cm);
+                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plot(true);
+                robot_flock.plotCentroids([], 'Obstacle');
+                robot_flock.plotCentroids([], 'Formation');
+            end
+        end
+        
+        
+        function effectiveCentoridTestLiberal(obj, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0; 0];       % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi / 2;       % [rad]
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 2;          % [m] max observable range
+            param_test.comm_range = 3;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
+            hold_positions_factor = 0.5;
+            hold_positions = [1.5, 3; 1.8, 1; 2.0, 0.9];
+            
+            agents(1) = agent('001', [1.75; 2.1], param_test, cargo, map_cm);
+            agents(2) = agent('002', [1.5; 0.9], param_test, cargo, map_cm);
+            agents(3) = agent('003', [2.5; 0.9], param_test, cargo, map_cm);
+            
+            robot_flock = flock(agents, cargo, obj.Ts / 2, 0);
+            
+            robot_flock.meetNeighbours();
+            robot_flock.sendScan(); 
+            robot_flock.computeVisibilitySets();
+            robot_flock.liberalConnectivityMaintenance('All', 'All');
+            robot_flock.computeVoronoiTessellation('All', 'All');
+            robot_flock.applyConstantDensity('Obstacle');
+            robot_flock.applyConstantDensity('Formation');
+            %robot_flock.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All'); 
+            centroids = robot_flock.computeVoronoiCentroids('Both');
+            
+            if(flag_plot == true)
+                figure();
+                axis equal
+                grid on
+                show(map_cm);
+                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plot(true);
+                robot_flock.plotCentroids([], 'Obstacle');
+                robot_flock.plotCentroids([], 'Formation');
             end
         end
             

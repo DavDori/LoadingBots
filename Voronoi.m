@@ -113,7 +113,7 @@ classdef Voronoi < handle
                             q = point - Neighbours(k).position';
                             dist = sqrt(q'*q); % distance between point and neighbour
                             if(dist > range_max(k))
-                                tmp_cell(i,j) = 0;
+                                tmp_cell(i,j) = tmp_cell(i,j) - val;
                                 break;
                             else
                                 % assumption: every neighbour discretize
@@ -128,6 +128,9 @@ classdef Voronoi < handle
                                     % neighbour that don't share that point
                                     % of the cell
                                     tmp_cell(i,j) = tmp_cell(i,j) - val;
+                                    if(tmp_cell(i,j) < 0)
+                                        tmp_cell(i,j) = 0;
+                                    end
                                     break
                                 end
                             end
@@ -227,7 +230,7 @@ classdef Voronoi < handle
                     phi = i * obj.phi_res;
                     [x, y] = polar2cartesian(rho, phi);
                     point = [x; y];
-                    if(isInside(cargo, agent_position + point, offset) == false)
+                    if(tmp_cell(j,i) ~= 0 && isInside(cargo, agent_position + point, offset) == false)
                         % outside the perimeter
                         tmp_cell(j,i) = 0;
                     end
@@ -248,18 +251,19 @@ classdef Voronoi < handle
                     if(obj.visibility_set(j,i) > 0)
                         rho = j * obj.rho_res;
                         phi = i * obj.phi_res;
-                        tmp_cell(j,i) = fun_d(rho, phi) * obj.visibility_set(j,i);
+                        raw_density = fun_d(rho, phi);
+                        tmp_cell(j,i) = raw_density * obj.visibility_set(j,i);
                     end
                 end
             end
             % calculate the normalizer for the applied density
-            norm = sum(tmp_cell(:)); 
-            if(isempty(obj.cell_density) == true && norm ~= 0)
-                obj.cell_density = tmp_cell / norm;
-            elseif(norm ~= 0)
-                obj.cell_density = obj.cell_density + tmp_cell / norm;
-            else
+            %norm = sum(tmp_cell(:)); 
+            if(isempty(obj.cell_density) == true) 
+                % initailizes 
                 obj.cell_density = tmp_cell;
+            else
+                % add
+                obj.cell_density = obj.cell_density + tmp_cell;
             end
         end
         
@@ -334,24 +338,23 @@ classdef Voronoi < handle
             % density function applied on it
             hold on
             max_value =  max(obj.cell_density, [], 'all');
-            if(max_value == 0)
-                max_value = 1;
-            end
-            for i = 1:step:obj.rho_n % rho
-                for j = 1:step:obj.phi_n % phi
-                    % represent every point of cell
-                    if(obj.visibility_set(i,j) == 1)
-                        [x_local,y_local] = polar2cartesian(i * obj.rho_res, j * obj.phi_res);
-                        local_p = [x_local, y_local]';
-                        global_p = local2global(position, local_p);
-                        
-                        normalizer = obj.cell_density(i,j) / max_value;
-                        color = [1,1,1] - [1,1,1] * normalizer;
-                        plot(global_p(1),global_p(2), '.', 'Color', color);
+            if(max_value > 0)
+                for i = 1:step:obj.rho_n % rho
+                    for j = 1:step:obj.phi_n % phi
+                        % represent every point of cell
+                        if(obj.visibility_set(i,j) > 0)
+                            [x_local,y_local] = polar2cartesian(i * obj.rho_res, j * obj.phi_res);
+                            local_p = [x_local, y_local]';
+                            global_p = local2global(position, local_p);
+
+                            normalizer = obj.cell_density(i,j) / max_value;
+                            color = [1,1,1] - [1,1,1] * normalizer;
+                            plot(global_p(1),global_p(2), '.', 'Color', color);
+                        end
                     end
                 end
+                hold off
             end
-            hold off
         end
         
         
