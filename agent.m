@@ -151,10 +151,11 @@ classdef agent < handle
         function move(obj, input_velocity) 
             % compute the position at the next integration step.
             % Saturation of speed
-            if(obj.max_speed > input_velocity)
+            module_v = sqrt(input_velocity(1)^2 + input_velocity(2)^2);
+            if(obj.max_speed > module_v)
                 velocity = input_velocity;
             else
-                velocity = obj.max_speed;
+                velocity = (input_velocity / module_v) * obj.max_speed;
             end
             if(size(velocity, 2) ~= 1)
                 obj.position = obj.position + obj.Ts * velocity';

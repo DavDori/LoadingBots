@@ -596,6 +596,7 @@ classdef tester
         
         
         function flag = priorityPD(~, flag_plot)
+            flag = true;
             % a ball is thrown in the upper part of the visibility set in
             % the horiziontal direction. The Voronoi cell has to change
             % consequently.
@@ -616,39 +617,33 @@ classdef tester
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             ts = 0.1;
-            steps = 10;
-            Kp = 1;
-            Kd = 1;
+            steps = 20;
+            Kp = 0.0;
+            Kd = 0.5;
             
-            agents(1) = agent('001', center + [0.8;  -0.5], param_test, cargo, map_cm);
-            agents(2) = agent('002', center + [-0.8; -0.5], param_test, cargo, map_cm);
-            agents(3) = agent('003', center + [0.0,;  0.5], param_test, cargo, map_cm);
-            agents(4) = agent('free',center + [0.0;   0.0], param_test, cargo, map_cm);
+            agents(1) = agent('001', [2;1], param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, ts, 0);
-            ball = Obstacle(0.2, [1;1], [2;0], ts);
+            ball = Obstacle(0.2, [0.3;1], [0.5;0], ts);
+            
             p = zeros(steps, robot_flock.n_agents);
             ball_x = zeros(steps, 1);
-            robot_flock.attachAll();
             
             last_d = zeros(robot_flock.n_agents, 1);
             
             for i = 1:steps
                 robot_flock.computeVisibilitySets(ball);
                 robot_flock.applyConstantDensity('Obstacle');
-                [id, new_d] = robot_flock.priorityRankingPD(Kp, Kd, last_d);
-                [p(i,:), ~] = robot_flock.priorityPD(Kp, Kd, last_d);
+                robot_flock.applyConstantDensity('Formation');
+                robot_flock.computeVoronoiCentroids();
+                [p(i,:), new_d] = robot_flock.priorityPD(Kp, Kd, last_d);
                 ball_x(i) = ball.center(1);
                 ball.move();
                 last_d = new_d; % updates the distances for the derivative term
             end
-            disp("The agent " + robot_flock.agents(id).name + " can move!");
             if(flag_plot == true)
                 figure();
-                hold on
-                for i = 1:robot_flock.n_agents
-                    plot(1:steps, p(:,i), 'DisplayName', robot_flock.agents(i).name);
-                end
+                plot(1:steps, p(:,1), 'DisplayName', robot_flock.agents(1).name);
                 legend 
                 grid on
             end

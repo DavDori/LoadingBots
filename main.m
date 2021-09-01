@@ -14,7 +14,7 @@ fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
 
 Testing_unit = tester(map, Ts, 1e-2);
-flag = Testing_unit.pointDensityLocal(true);
+flag = Testing_unit.priorityPD(true);
 disp(flag);
 % test = Testing_unit.priorityPD(true);
 %Testing_unit.runAll(true);

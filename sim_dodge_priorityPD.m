@@ -21,8 +21,8 @@ cargo_p.orientation = pi / 2;       % [rad]
 % Agents
 n_agents = 8;               % number of agents
 division_starting_spots = 3; % define the starting areas
-agent_p.range = 1.8;         % [m] max observable range
-agent_p.comm_range = 1.8;      % [m] max connection distance
+agent_p.range = 2.0;         % [m] max observable range
+agent_p.comm_range = 2.0;      % [m] max connection distance
 agent_p.radius = 0.05;       % [m] hitbox of the agent
 agent_p.N_rho = 50;          % division of the radius for discretization
 agent_p.N_phi = 50;          % division of the angle for discretization
@@ -45,26 +45,26 @@ slow_factor = 1;   % x1 speed of visualization
 
 % Centroids gains ---------------------------------------------------------
 
-kp_formation = 6;   % formation centroid gain
-kp_obstacle = 0.5;    % obstacle centroid gain
+kp_formation = 3;%6;   % formation centroid gain
+kp_obstacle = 0;%0.5;    % obstacle centroid gain
 
 SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
 
 bound = 0.05; % buonds to keep when in formation
-hold_positions_factor = 0.8;
+hold_positions_factor = 0.7;
 
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.15; % attach threshold
+param_at.th = 0.08; % attach threshold
 
 % detaching
-param_dt.th = 0.08; % thershold for detaching
+param_dt.th = 0.10; % thershold for detaching
 
 % prioirty
-Kp = 0.6; % importance of obstacle distance in priority
-Kd = 0.8;   % importance of obstacle velocity in priority
+Kp = 0.8; %0.5 % importance of obstacle distance in priority
+Kd = 0.4; %0.5 % importance of obstacle velocity in priority
 
 min_p_COM = 0;                 % min priority bonus due to distance form COM
 max_p_COM = param_dt.th * 0.5; % max priority bonus due to distance form COM
@@ -124,7 +124,7 @@ for i = 1:SUC_steps
     robots.meetNeighbours();
     robots.sendScan([]); 
     robots.computeVisibilitySets(); % no obstacle is present in this phase
-    %robots.connectivityMaintenance('All', 'All');
+    robots.liberalConnectivityMaintenance('All', 'All');
     robots.computeVoronoiTessellationCargo(offset_cargo);
     robots.applyFarFromCenterMassDensity(5);
     robots.computeVoronoiCentroids();
@@ -139,6 +139,7 @@ for i = 1:SUC_steps
         axis equal
         grid on
         show(map);
+        %robots.plotVoronoiTessellationDetailed(1);
         robots.plot(n_agents < 10);
         %robots.plotCentroids('Formation');
         Ball.plot();
@@ -189,8 +190,7 @@ for i = 1:steps
     robots.applyConstantDensity('Obstacle');
     
     % all robots should tend to return to the original position under cargo
-    robots.applyMultiplePointsDensityLocal(hold_positions, hold_positions_factor, 'All');
-    % add 
+    robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All'); 
     
     robots.computeVoronoiCentroids();
     
@@ -238,7 +238,7 @@ for i = 1:steps
         axis equal
         grid on
         show(map);
-        robots.plotVoronoiTessellationDetailed(3, ids_dt);
+        robots.plotVoronoiTessellationDetailed(1, ids_dt);
         robots.plot(n_agents < 10);
         robots.plotCentroids(ids_at, 'Obstacle');
         robots.plotCentroids(ids_dt, 'Formation');
