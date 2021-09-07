@@ -585,6 +585,13 @@ classdef flock < handle
             end
         end
         
+        
+        function setDensityAngles(obj, angles_range, v_in, v_out, ids, type)
+            for i = ids
+                obj.agents(i).setDensityAngle(angles_range(i,:), v_in, v_out, type);
+            end
+        end
+        
         % METHODS: priority -----------------------------------------------
         
         function p = priorityP(obj, Kp)

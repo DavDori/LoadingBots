@@ -857,6 +857,46 @@ classdef tester
         end
         
         
+        function flag_success = angleDensity(obj, flag_plot)
+            % a ball is thrown in the upper part of the visibility set in
+            % the horiziontal direction. The Voronoi cell has to change
+            % consequently.
+            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            
+            center = [2 ; 1]; % [m]
+            center_mass = [0; 0];       % [m]
+            dimensions = [1.5; 1];      % [m]
+            orientation = pi / 2;       % [rad]
+            cargo = RectangularCargo(center, center_mass, orientation, dimensions);
+            
+            
+            param_test.range = 0.5;          % [m] max observable range
+            param_test.comm_range = 0.5;     % [m] max connection distance
+            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.N_rho = 30;           % division of the radius for discretization
+            param_test.N_phi = 50;           % division of the angle for discretization
+            param_test.max_speed = 1;        % [m/s] maximum speed of the agents
+            
+            agents(1) = agent('001', [1.5; 1], param_test, cargo, map_cm);
+            
+            robot_flock = flock(agents, cargo, obj.Ts, 0);
+            
+            robot_flock.computeVisibilitySets();
+            range = [pi/2,pi];
+            robot_flock.setDensityAngles(range, 1, 0.2, 1, 'Formation');
+
+            robot_flock.computeVoronoiCentroids();
+            if(flag_plot == true)
+                figure();
+                hold on;
+                show(map_cm);
+                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plot(true);
+            end
+            flag_success = true;
+        end
+        
+        
         function runAll(obj, view)
             e = obj.centroidOmogeneus();
             if(e == false)

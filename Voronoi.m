@@ -333,6 +333,39 @@ classdef Voronoi < handle
         end
         
         
+        function setDensityAngle(obj, angle_range, value_in, value_out)
+            % given an angle range it multiply all density cells inside by 
+            % value_in and the others by value_out
+            index_lower = obj.getAngleIndex(change_piTo2pi(angle_range(1)));
+            index_upper = obj.getAngleIndex(change_piTo2pi(angle_range(2)));
+            
+            density_mask = zeros(size(obj.cell_density));
+            [rows, cols] = size(obj.cell_density);
+            
+            if(index_lower > index_upper) % select the opposite area
+                density_mask(:, 1:index_upper) = ...
+                    ones(rows, index_upper) * value_in;
+                density_mask(:, index_upper+1:index_lower) = ...
+                    ones(rows, index_lower - index_upper) * value_out;
+                density_mask(:, index_lower+1:end) = ...
+                    ones(rows, cols - index_lower) * value_in;
+            else
+                density_mask(:, 1:index_lower) = ...
+                    ones(rows, index_lower) * value_out;
+                density_mask(:, index_lower+1:index_upper) = ...
+                    ones(rows, index_upper - index_lower) * value_in;
+                density_mask(:, index_upper+1:end) = ...
+                    ones(rows, cols - index_upper) * value_out;
+            end
+            
+            if(sum(sum(obj.cell_density)) == 0)
+                obj.cell_density = obj.visibility_set .* density_mask;
+            else
+                obj.cell_density = obj.cell_density .* density_mask;
+            end
+        end
+        
+        
         function plot(obj, position, step)
             % plot a detaild version of the voronoi cell considering a
             % density function applied on it

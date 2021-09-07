@@ -378,6 +378,21 @@ classdef agent < handle
             % way point
             applyVoronoiPointDensity(obj, obj.way_point, sf);
         end
+        
+        
+        function setDensityAngle(obj, angle_range, v_in, v_out, type)
+            % given an angle range, it apply two multipliers to the cells
+            % inside v_in, to the cells outside v_out
+            if(nargin < 5)
+                obj.formation_VC.setDensityAngle(angle_range, v_in, v_out)
+            elseif(strcmp(type, 'Formation') || isempty(type) == true)
+                obj.formation_VC.setDensityAngle(angle_range, v_in, v_out)
+            elseif(strcmp(type, 'Obstacle'))
+                obj.obstacle_VC.setDensityAngle(angle_range, v_in, v_out)
+            else
+                error(strcat('Error: wrong type: ', type, 'of voronoi cell'))
+            end
+        end
                 
         % METHODS: path planning ------------------------------------------
         
@@ -401,6 +416,38 @@ classdef agent < handle
         function c = getObstacleCentroid(obj)
             % return the centroid relative to the obstacle cell
             c = obj.obstacle_VC.computeCentroid(); 
+        end
+        
+        
+        function alpha = getObstacleCentroidAngle(obj)
+            % the centroid of the obstacle voronoi cell has to be 
+            % calculated before this operation
+            c = obj.obstacle_VC.centroid;
+            alpha = atan2(c(2), c(1));
+        end
+        
+        function alpha = getFormationCentroidAngle(obj)
+            % the centroid of the formation voronoi cell has to be 
+            % calculated before this operation
+            c = obj.formation_VC.centroid;
+            alpha = atan2(c(2), c(1));
+        end
+        
+        function [m_obs, m_for] = centroidsModule(obj)
+            % compute the distance of both centroids
+            c_o = obj.getObstacleCentroid();
+            c_f = obj.getFormationCentroid();
+            m_obs = sqrt(c_o' * c_o);
+            m_for = sqrt(c_f' * c_f);
+        end
+        
+        
+        function [m] = centroidModule(obj)
+            % compute the distance of the sum of both centroids
+            c_o = obj.getObstacleCentroid();
+            c_f = obj.getFormationCentroid();
+            c   = c_o + c_f;
+            m = sqrt(c' * c);
         end
         
         % METHODS: auxiliary ----------------------------------------------   
@@ -474,25 +521,6 @@ classdef agent < handle
             p = d * Kp + (d - last_d) * Kd;
             obj.priority = p;
         end
-        
-        
-        function [m_obs, m_for] = centroidsModule(obj)
-            % compute the distance of both centroids
-            c_o = obj.getObstacleCentroid();
-            c_f = obj.getFormationCentroid();
-            m_obs = sqrt(c_o' * c_o);
-            m_for = sqrt(c_f' * c_f);
-        end
-        
-        
-        function [m] = centroidModule(obj)
-            % compute the distance of the sum of both centroids
-            c_o = obj.getObstacleCentroid();
-            c_f = obj.getFormationCentroid();
-            c   = c_o + c_f;
-            m = sqrt(c' * c);
-        end
-        
         
         % METHODS: representation -----------------------------------------
         

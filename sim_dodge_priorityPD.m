@@ -20,9 +20,9 @@ cargo_p.orientation = pi / 2;       % [rad]
 
 % Agents
 n_agents = 8;               % number of agents
-division_starting_spots = 3; % define the starting areas
-agent_p.range = 2.0;         % [m] max observable range
-agent_p.comm_range = 2.0;      % [m] max connection distance
+division_starting_spots = 4; % define the starting areas
+agent_p.range = 1.0;         % [m] max observable range
+agent_p.comm_range = 1.0;      % [m] max connection distance
 agent_p.radius = 0.05;       % [m] hitbox of the agent
 agent_p.N_rho = 50;          % division of the radius for discretization
 agent_p.N_phi = 50;          % division of the angle for discretization
@@ -37,7 +37,7 @@ ball_p.w = deg2rad(5);    % [rad] uncertainty on the obstacle direction
 
 % Simulation parameters----------------------------------------------------
 video_flag = true;
-steps_per_frame = 4; % take 1 frame every 3 steps of simulation
+steps_per_frame = 2; % take 1 frame every x steps of simulation
 
 Ts = 5e-2;         % sampling time
 sim_time = 16;     % total simulation time
@@ -45,26 +45,26 @@ slow_factor = 1;   % x1 speed of visualization
 
 % Centroids gains ---------------------------------------------------------
 
-kp_formation = 3;%6;   % formation centroid gain
+kp_formation = 4;%6;   % formation centroid gain
 kp_obstacle = 0;%0.5;    % obstacle centroid gain
 
 SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
 
 bound = 0.05; % buonds to keep when in formation
-hold_positions_factor = 0.7;
+hold_positions_factor = 0.5;
 
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.08; % attach threshold
+param_at.th = 0.05; % attach threshold
 
 % detaching
-param_dt.th = 0.10; % thershold for detaching
+param_dt.th = 0.70; % thershold for detaching
 
 % prioirty
-Kp = 0.8; %0.5 % importance of obstacle distance in priority
-Kd = 0.4; %0.5 % importance of obstacle velocity in priority
+Kp = 3; %importance of obstacle centroid length in priority
+Kd = 7; %importance of obstacle centroid radial velocity in priority
 
 min_p_COM = 0;                 % min priority bonus due to distance form COM
 max_p_COM = param_dt.th * 0.5; % max priority bonus due to distance form COM
@@ -183,9 +183,9 @@ for i = 1:steps
     robots.liberalConnectivityMaintenance('Detached', 'All');
     
     %detached must stay in the box limits
-    %robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'All');
+    robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'Detached');
     % otherwise use
-    robots.computeVoronoiTessellation('Detached', 'All');
+    %robots.computeVoronoiTessellation('Detached', 'All');
     
     robots.applyConstantDensity('Obstacle');
     
