@@ -61,6 +61,8 @@ param_at.th = 0.05; % attach threshold
 
 % detaching
 param_dt.th = 0.70; % thershold for detaching
+density_in = 1;     % in angle range density multiplier
+density_out = 0.5;  % out angle range density multiplier
 
 % prioirty
 Kp = 3; %importance of obstacle centroid length in priority
@@ -191,6 +193,8 @@ for i = 1:steps
     
     % all robots should tend to return to the original position under cargo
     robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All'); 
+    
+    robots.dodgeDensity(density_in, density_out, []);
     
     robots.computeVoronoiCentroids();
     

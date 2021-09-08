@@ -23,6 +23,7 @@ classdef agent < handle
         Neighbours_scan  % scanned area of the Neighbours
         formation_VC Voronoi  % Voronoi cell used for formation
         obstacle_VC  Voronoi  % Voronoi cell used for obstacle avoidance
+        detach_angle % centroid angle when the robot detaches
         
         bounds double {mustBeNumeric} % ideal distances to keep from each neighbour
         way_point (2,1) double {mustBeNumeric} % position to reach
@@ -48,6 +49,7 @@ classdef agent < handle
             obj.obstacle_VC = Voronoi(param.N_rho, param.N_phi, param.range);
             obj.priority = 0;
             obj.color = rand(1,3);
+            obj.detach_angle = 0;
         end
               
         % METHODS: communication
@@ -189,6 +191,7 @@ classdef agent < handle
         function obj = detach(obj) 
             % detach the agent from the load
             obj.attached = false;
+            obj.detach_angle = obj.getObstacleCentroidAngle();
         end
         
         % METHODS: voronoi cell
@@ -423,7 +426,11 @@ classdef agent < handle
             % the centroid of the obstacle voronoi cell has to be 
             % calculated before this operation
             c = obj.obstacle_VC.centroid;
-            alpha = atan2(c(2), c(1));
+            if(sqrt(c*c') < 0.0001) % centroid very close to 0
+                alpha = 0;
+            else
+                alpha = atan2(c(2), c(1));
+            end
         end
         
         function alpha = getFormationCentroidAngle(obj)

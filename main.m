@@ -14,8 +14,7 @@ fprintf('TESTING SECTION\n');
 % for simulation need a high resolution
 
 Testing_unit = tester(map, Ts, 1e-2);
-Testing_unit.effectiveCentoridTestLiberal(true);
-Testing_unit.effectiveCentoridTest(true);
+Testing_unit.angleDensity(true);
 
 % test = Testing_unit.priorityPD(true);
 %Testing_unit.runAll(true);

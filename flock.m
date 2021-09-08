@@ -587,8 +587,23 @@ classdef flock < handle
         
         
         function setDensityAngles(obj, angles_range, v_in, v_out, ids, type)
+            % se density inside the angles_range of each agent as v_in and
+            % outside as v_out
             for i = ids
                 obj.agents(i).setDensityAngle(angles_range(i,:), v_in, v_out, type);
+            end
+        end
+        
+        function dodgeDensity(obj, v_in, v_out, ids)
+            % splits in halt the density along the obstacle centroid axis
+            % and change its values
+            if(isempty(ids) == true) % takes all the detached agents
+                ids = obj.getDetached();
+            end
+            for i = ids
+                alpha = obj.agents(i).detach_angle;
+                angle_range = [alpha, alpha + pi]; 
+                obj.agents(i).setDensityAngle(angle_range, v_in, v_out, 'Formation');
             end
         end
         
