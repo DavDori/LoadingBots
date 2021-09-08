@@ -49,7 +49,7 @@ classdef agent < handle
             obj.obstacle_VC = Voronoi(param.N_rho, param.N_phi, param.range);
             obj.priority = 0;
             obj.color = rand(1,3);
-            obj.detach_angle = 0;
+            obj.detach_angle = [0,0];
         end
               
         % METHODS: communication
@@ -191,7 +191,14 @@ classdef agent < handle
         function obj = detach(obj) 
             % detach the agent from the load
             obj.attached = false;
-            obj.detach_angle = obj.getObstacleCentroidAngle();
+            angle = obj.getObstacleCentroidAngle();
+            [m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
+            if(m_out > m_in) % select the region outside the range
+                angle_range = [angle + pi, angle]; 
+            else
+                angle_range = [angle, angle + pi]; 
+            end
+            obj.detach_angle = angle_range;
         end
         
         % METHODS: voronoi cell
@@ -205,7 +212,6 @@ classdef agent < handle
             
             s = zeros(obj.formation_VC.phi_n, 2);
             new_map = binaryOccupancyMap(obj.map); % copy
-            tmp_map = binaryOccupancyMap(obj.map); % copy
             if(isempty(obs) == false)
                 obs_map = addDisksToMap(obj.map, obs.center, obs.radius);
                 syncWith(new_map, obs_map);
@@ -396,6 +402,20 @@ classdef agent < handle
                 error(strcat('Error: wrong type: ', type, 'of voronoi cell'))
             end
         end
+        
+        function [m_in, m_out] = getMassAngle(obj, angle_range, type)
+            % given an angle range, it gets the mass of the entire cell
+            % area withing that range
+            if(nargin < 5)
+                [m_in, m_out] = obj.formation_VC.getMassAngle(angle_range);
+            elseif(strcmp(type, 'Formation') || isempty(type) == true)
+                [m_in, m_out] = obj.formation_VC.getMassAngle(angle_range);
+            elseif(strcmp(type, 'Obstacle'))
+                [m_in, m_out] = obj.obstacle_VC.getMassAngle(angle_range);
+            else
+                error(strcat('Error: wrong type: ', type, 'of voronoi cell'))
+            end
+        end
                 
         % METHODS: path planning ------------------------------------------
         
@@ -427,7 +447,7 @@ classdef agent < handle
             % calculated before this operation
             c = obj.obstacle_VC.centroid;
             if(sqrt(c*c') < 0.0001) % centroid very close to 0
-                alpha = 0;
+                alpha = [];
             else
                 alpha = atan2(c(2), c(1));
             end

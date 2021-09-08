@@ -601,9 +601,25 @@ classdef flock < handle
                 ids = obj.getDetached();
             end
             for i = ids
-                alpha = obj.agents(i).detach_angle;
-                angle_range = [alpha, alpha + pi]; 
+                angle_range = obj.agents(i).detach_angle;
                 obj.agents(i).setDensityAngle(angle_range, v_in, v_out, 'Formation');
+            end
+        end
+        
+        function dodgeDensityDyn(obj, v_in, v_out, ids)
+            % splits in halt the density along the obstacle centroid axis
+            % and change its values dynamically
+            if(isempty(ids) == true) % takes all the detached agents
+                ids = obj.getDetached();
+            end
+            for i = ids
+                alpha = obj.agents(i).getObstacleCentroidAngle();
+                % only if the centroid has big enough module the angle is
+                % considered
+                if(isempty(alpha) == false)
+                    angle_range = [alpha, alpha + pi]; 
+                    obj.agents(i).setDensityAngle(angle_range, v_in, v_out, 'Formation');
+                end
             end
         end
         

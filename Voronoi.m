@@ -366,6 +366,28 @@ classdef Voronoi < handle
         end
         
         
+        function [m_in, m_out] = getMassAngle(obj, angle_range)
+            % given an angle range it multiply all density cells inside by 
+            % value_in and the others by value_out
+            index_1 = obj.getAngleIndex(change_piTo2pi(angle_range(1)));
+            index_2 = obj.getAngleIndex(change_piTo2pi(angle_range(2)));
+            
+            index_lower = min(index_1, index_2);
+            index_upper = max(index_1, index_2);
+            [~, cols] = size(obj.cell_density);
+            
+            m_out = sum(sum(obj.cell_density(:, 1:index_lower)));
+            m_out = m_out + sum(sum(obj.cell_density(:, index_upper:cols)));
+            m_in = sum(sum(obj.cell_density(:, index_upper:index_lower)));
+            
+            if(index_1 > index_2) % swaps
+                m_tmp = m_in;
+                m_in  = m_out;
+                m_out = m_tmp;
+            end
+        end
+        
+        
         function plot(obj, position, step)
             % plot a detaild version of the voronoi cell considering a
             % density function applied on it
