@@ -24,6 +24,7 @@ classdef agent < handle
         formation_VC Voronoi  % Voronoi cell used for formation
         obstacle_VC  Voronoi  % Voronoi cell used for obstacle avoidance
         detach_angle % centroid angle when the robot detaches
+        last_centroid % last centroid stored as vector
         
         bounds double {mustBeNumeric} % ideal distances to keep from each neighbour
         way_point (2,1) double {mustBeNumeric} % position to reach
@@ -176,6 +177,8 @@ classdef agent < handle
             else
                 error('Trying to move towards centroid but it has not been computed');
             end
+            % considers movement as last operation 
+            obj.last_centroid = obj.obstacle_VC.centroid;
         end
         
         
@@ -191,14 +194,30 @@ classdef agent < handle
         function obj = detach(obj) 
             % detach the agent from the load
             obj.attached = false;
-            angle = obj.getObstacleCentroidAngle();
-            [m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
-            if(m_out > m_in) % select the region outside the range
-                angle_range = [angle + pi, angle]; 
+            c_prv = obj.last_centroid;
+            c_now = obj.obstacle_VC.centroid;
+            
+            if(isempty(c_prv) || isempty(c_now))
+                warning('Cannot perform obstacle direction detection!');
             else
-                angle_range = [angle, angle + pi]; 
+                obstacle_direction = c_prv - c_now;
+                angle = angle2D(obstacle_direction, 0.00001);
+                [m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
+                if(m_out > m_in) % select the region outside the range
+                    angle_range = [angle + pi, angle]; 
+                else
+                    angle_range = [angle, angle + pi]; 
+                end
+                obj.detach_angle = angle_range;
             end
-            obj.detach_angle = angle_range;
+%             angle = obj.getObstacleCentroidAngle();
+%             [m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
+%             if(m_out > m_in) % select the region outside the range
+%                 angle_range = [angle + pi, angle]; 
+%             else
+%                 angle_range = [angle, angle + pi]; 
+%             end
+%             obj.detach_angle = angle_range;
         end
         
         % METHODS: voronoi cell
@@ -446,18 +465,14 @@ classdef agent < handle
             % the centroid of the obstacle voronoi cell has to be 
             % calculated before this operation
             c = obj.obstacle_VC.centroid;
-            if(sqrt(c*c') < 0.0001) % centroid very close to 0
-                alpha = [];
-            else
-                alpha = atan2(c(2), c(1));
-            end
+            alpha = angle2D(c, 0.0001);
         end
         
         function alpha = getFormationCentroidAngle(obj)
             % the centroid of the formation voronoi cell has to be 
             % calculated before this operation
             c = obj.formation_VC.centroid;
-            alpha = atan2(c(2), c(1));
+            alpha = angle2D(c, 0.0001);
         end
         
         function [m_obs, m_for] = centroidsModule(obj)
