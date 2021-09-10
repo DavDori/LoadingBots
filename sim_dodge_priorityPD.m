@@ -130,6 +130,7 @@ for i = 1:SUC_steps
     robots.liberalConnectivityMaintenance('All', 'All');
     robots.computeVoronoiTessellationCargo(offset_cargo);
     robots.applyFarFromCenterMassDensity(5);
+    robots.applyConstantDensity('Obstacle');
     robots.computeVoronoiCentroids();
     robots.moveToCentroids(kp_formation);
     
