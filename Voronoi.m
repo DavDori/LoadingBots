@@ -336,8 +336,8 @@ classdef Voronoi < handle
         function setDensityAngle(obj, angle_range, value_in, value_out)
             % given an angle range it multiply all density cells inside by 
             % value_in and the others by value_out
-            index_lower = obj.getAngleIndex(change_piTo2pi(angle_range(1)));
-            index_upper = obj.getAngleIndex(change_piTo2pi(angle_range(2)));
+            index_lower = obj.getAngleIndex(wrapTo2Pi(angle_range(1)));
+            index_upper = obj.getAngleIndex(wrapTo2Pi(angle_range(2)));
             
             density_mask = zeros(size(obj.cell_density));
             [rows, cols] = size(obj.cell_density);

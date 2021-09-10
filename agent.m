@@ -51,6 +51,7 @@ classdef agent < handle
             obj.priority = 0;
             obj.color = rand(1,3);
             obj.detach_angle = [0,0];
+            obj.last_centroid = [0;0];
         end
               
         % METHODS: communication
