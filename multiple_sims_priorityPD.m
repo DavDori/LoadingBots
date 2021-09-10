@@ -18,11 +18,14 @@ cargo_p.dimensions =  [1.5; 1.5];   % [m]
 cargo_p.orientation = pi/2;         % [rad]
 
 % Agents
-agent_p.range = 2.5;            % [m] max observable range
-agent_p.comm_range = 5;       % [m] max connection distance
+n_agents = 10;
+division_starting_spots = 4;
+agent_p.range = 1.0;            % [m] max observable range
+agent_p.comm_range = 1.0;       % [m] max connection distance
 agent_p.radius = 0.05;         % [m] hitbox of the agent
-agent_p.N_rho = 36;           % division of the radius for discretization
-agent_p.N_phi = 36;           % division of the angle for discretization
+agent_p.N_rho = 40;           % division of the radius for discretization
+agent_p.N_phi = 40;           % division of the angle for discretization
+agent_p.max_speed = 0.5;     % [m/s] maximum speed reachable by the agent
 
 % Ball
 ball_p.init_distance = 2;% [m] distance of the ball location from the center
@@ -34,16 +37,17 @@ ball_p.w = deg2rad(1);   % [rad] uncertainty on the obstacle direction
 
 Ts = 5e-2;         % sampling time
 sim_time = 18;     % total simulation time
-n_sims = 18;       % number of simulations
+n_sims = 20;       % number of simulations
 
 % Centroids gains ---------------------------------------------------------
 % consider that the formation cell is always included in the obstacle
 % Voroni cell
-kp_formation = 1;   % formation centroid gain
-kp_obstacle = 0.2;    % obstacle centroid gain
+kp_formation = 6;   % formation centroid gain
+kp_obstacle = 0.0;    % obstacle centroid gain
 
-SUC_steps = 30;     % spread under cargo steps
+SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
+offset_cargo_PD = 0.4;
 
 bound = 0.05; % buonds to keep when in formation
 hold_positions_factor = 0.2;
@@ -51,29 +55,30 @@ hold_positions_factor = 0.2;
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.5; % attach threshold
+param_at.th = 0.05; % attach threshold
 
 % detaching
-param_dt.th = 0.15; % thershold for detach
+param_dt.th = 0.8; % thershold for detach
+density_in = 1;     % in angle range density multiplier
+density_out = 0.3;  % out angle range density multiplier
 
 % prioirty
-Kp = 0.5; % importance of obstacle distance in priority
-Kd = 0.5;   % importance of obstacle velocity in priority
+Kp = 4; % importance of obstacle distance in priority
+Kd = 7;   % importance of obstacle velocity in priority
 
-alpha_COM = 5; % convergance rate of the priority on center of mass distance
-K_COM = param_dt.th * 2;  % importance of the priority on center of mass distance
-offset_COM = -param_dt.th;
+min_p_COM = 0;                 % min priority bonus due to distance form COM
+max_p_COM = param_dt.th * 0.5; % max priority bonus due to distance form COM
 
 % agents starting positions -----------------------------------------------
 
-n_agents = 20;
+
 
 names = {'Bob', 'Jet', 'Zoe', 'Tim', 'Lue', 'Hari', '007', 'Gaal', 'Tif',...
     'Hug', 'Mug', 'May','Emy', 'Jim', 'Pos', 'Ari', 'Sin', 'Cos', 'Mem'};
 
 steps = fix(sim_time / Ts);
 
-division_starting_spots = 5;
+
 
 
 %% OBJECT INIT
@@ -113,9 +118,12 @@ for j = 1:n_sims
     disp('Starting: spread under cargo phase');
     for i = 1:SUC_steps
         robots.meetNeighbours();
+        robots.sendScan([]); 
         robots.computeVisibilitySets(); % no obstacle is present in this phase
+        robots.liberalConnectivityMaintenance('All', 'All');
         robots.computeVoronoiTessellationCargo(offset_cargo);
         robots.applyFarFromCenterMassDensity(5);
+        robots.applyConstantDensity('Obstacle');
         robots.computeVoronoiCentroids();
         robots.moveToCentroids(kp_formation);
 
@@ -128,7 +136,7 @@ for j = 1:n_sims
     % set positions to hold
     hold_positions = robots.getAgentsPositions('All');
     % initialize the obstacle distances for PD priority with the maximunm value
-    last_d = zeros(robots.n_agents, 1) * agent_p.range; % set to 0
+    last_d = zeros(robots.n_agents, 1); % set to 0
     disp('Starting: dodging phase');
     for i = 1:steps
 
@@ -140,17 +148,21 @@ for j = 1:n_sims
         robots.computeVisibilitySets(Ball);
 
         % detached robots have just to stay in connectivity range
-        robots.connectivityMaintenance('Detached', 'All');
+        %robots.connectivityMaintenance('Detached', 'All');
+        robots.liberalConnectivityMaintenance('Detached', 'All');
 
         %detached must stay in the box limits
-        robots.computeVoronoiTessellationCargo(offset_cargo, 'Detached', 'All');
+        robots.computeVoronoiTessellationCargo(offset_cargo_PD, 'Detached', 'All');
         % otherwise use
-        % robots.computeVoronoiTessellation('Detached', 'Detached');
+        %robots.computeVoronoiTessellation('Detached', 'All');
 
         robots.applyConstantDensity('Obstacle');
 
         % all robots should tend to return to the original position under cargo
-        robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All');
+        robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All'); 
+
+        robots.dodgeDensity(density_in, density_out, []);
+
         robots.computeVoronoiCentroids();
 
         % get priority for each agent. Agents in a sfae zone that want to
@@ -159,40 +171,20 @@ for j = 1:n_sims
         [priorityPD, new_d] = robots.priorityPD(Kp, Kd, last_d);
         % compute the priority in function of the distance from the center of
         % mass of the cargo
-        priorityCOM = robots.priorityCOM(alpha_COM, K_COM, offset_COM);
+        priorityCOM = robots.priorityCOM(min_p_COM, max_p_COM, max(cargo.dimension));
 
         priority = priorityPD + priorityCOM;
+        priority_filtered = priority;
 
         % return id of attacheable and detachable agents
         ids_detachable = robots.detachable();
         ids_attachable = robots.attachable();
 
-        % calculate the centroid module for both attachable and detachable
+        % calculate the centroid module for both attachable condition
         [m_obs_attach, m_for_attach] = robots.centroidsModule(1:robots.n_agents);
-
-        if(isempty(ids_detachable) == false) % there is at least a robot that can detach
-            % select the one with higher priority. One agent at the time can
-            % detach
-            [val_detach, id_rel] = max(priority(ids_detachable));
-            id_abs = ids_detachable(id_rel); % get the absolute id of the agent
-
-            if(val_detach > param_dt.th)
-                robots.detach(id_abs);
-            end
-        end
-
         drive_force = m_obs_attach + m_for_attach;
-
-        if(isempty(ids_attachable) == false) % there is at least a robot that can detach
-
-            % select agents that have a drive force smaller than the threshold,
-            % meaning they are close to an equilibrium
-            for k = ids_attachable
-                if(drive_force(k) < param_at.th)
-                    robots.attach(k);
-                end
-            end
-        end
+        
+        [id_detachable] = detachRobotPriority(ids_detachable, priority, param_dt.th);
 
         % next step of simulation
         % follows the vectorial sum of both vectors defined by the centroids.
@@ -201,6 +193,18 @@ for j = 1:n_sims
         % weight
         robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
         Ball.move();
+        
+        ids_at = robots.getAttached();
+        ids_dt = robots.getDetached();
+        
+        if(isempty(id_detachable) == false)
+            robots.detach(id_detachable);
+        end
+        [ids_equilibirum] = attachRobotEquilibrium(ids_attachable, drive_force,...
+                            priority, param_at.th, param_dt.th);
+        if(isempty(ids_equilibirum) == false)
+            robots.attach(ids_equilibirum);
+        end
 
         last_d = new_d;
 
@@ -209,7 +213,7 @@ for j = 1:n_sims
         if(hit == true)
             disp('Critical failure: Collision!');
             success_dodge(2,j) = 0;
-            break; % exit the simulation loop 
+            break; % exit the simulation loop
         end
     end
     disp('Dodging phase concluded...');
