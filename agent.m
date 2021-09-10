@@ -199,7 +199,7 @@ classdef agent < handle
             c_now = obj.obstacle_VC.centroid;
             
             if(isempty(c_prv) || isempty(c_now))
-                warning('Cannot perform obstacle direction detection!');
+                %warning('Cannot perform obstacle direction detection!');
             else
                 obstacle_direction = c_prv - c_now;
                 angle = angle2D(obstacle_direction, 0.00001);
