@@ -388,7 +388,7 @@ classdef Voronoi < handle
         end
         
         
-        function plot(obj, position, step)
+        function plot(obj, position, step, res)
             % plot a detaild version of the voronoi cell considering a
             % density function applied on it
             hold on
@@ -404,7 +404,9 @@ classdef Voronoi < handle
 
                             normalizer = obj.cell_density(i,j) / max_value;
                             color = [1,1,1] - [1,1,1] * normalizer;
-                            plot(global_p(1),global_p(2), '.', 'Color', color);
+                            plot(global_p(1),global_p(2), 'o', 'Color', color,...
+                                'MarkerSize', 2*res*obj.rho_res*i*sin(obj.phi_res),...
+                                'MarkerFaceColor', color);
                         end
                     end
                 end

@@ -42,6 +42,15 @@ classdef flock < handle
             end
         end
         
+        function saveCargoPosition(obj, set)
+            % attach the selected agents on the board
+            if(nargin < 2)
+                set = 1:obj.n_agents;
+            end
+            for i = set
+                obj.agents(i).saveCargoPosition(); 
+            end
+        end
         
         function detach(obj, set)
             % detach the selected agents on the board
@@ -183,6 +192,15 @@ classdef flock < handle
                 ids = 1:obj.n_agents;
             else
                 error('wrong type of agent selected! Specify Attached, All or Detached as type')
+            end
+        end
+        
+        
+        function wp = getCurrentWayPoints(obj)
+            % return list of way_points for each agent
+            wp = zeros(obj.n_agents, 2);
+            for i = 1:obj.n_agents
+                wp(i,:) = obj.agents(i).way_point;
             end
         end
         
@@ -523,7 +541,7 @@ classdef flock < handle
             % is modeled as a unicycle and the starting position is the
             % current position of the cargo center. The output is a
             % sequence of n points
-            % Note: cmds structure: [v, w] and time is considered as 1 unit
+            % Note: cmds structure: [v, w] and time is considered as 1 s
             n = size(cmds,1); % rows
             waypoints = zeros(n, 3); % [x,y,theta]
             prev = [obj.agents(1).cargo.center; obj.agents(1).cargo.orientation]'; % initial pose
@@ -824,7 +842,6 @@ classdef flock < handle
             % representation in a 2D plane of the agents and the load
             hold on
             axis equal
-            obj.cargo.plot('r')
             for a = obj.agents
                 a.plot(plot_name_flag);
             end
@@ -835,21 +852,21 @@ classdef flock < handle
             % plot the limit perimeter of the Voronoi cells of every robot
             hold on
             for a = obj.agents
-                a.Voronoi_cell.plotFast(a.position, [rand,rand,rand]); 
+                a.formation_VC.plotFast(a.position, [rand,rand,rand]); 
             end
             hold off
         end
         
         
-        function plotVoronoiTessellationDetailed(obj, step, ids)
+        function plotVoronoiTessellationDetailed(obj, step, res, ids)
             % plot the Voronoi cells of every robot considering every point
             % of the cell
-            if nargin < 3
+            if nargin < 4
                 ids = 1:obj.n_agents;
             end
             hold on
             for i = ids
-                obj.agents(i).plotVoronoiCellDetailed(step); 
+                obj.agents(i).plotVoronoiCellDetailed(step, res); 
             end
             hold off
         end

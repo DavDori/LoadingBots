@@ -18,25 +18,25 @@ cargo_p.dimensions =  [1.5; 1.5];   % [m]
 cargo_p.orientation = pi/2;         % [rad]
 
 % Agents
-n_agents = 5;
-division_starting_spots = 3;
-agent_p.range = 1.5;            % [m] max observable range
-agent_p.comm_range = 1.5;       % [m] max connection distance
+n_agents = 10;
+division_starting_spots = 4;
+agent_p.range = 1.0;            % [m] max observable range
+agent_p.comm_range = 1.0;       % [m] max connection distance
 agent_p.radius = 0.05;         % [m] hitbox of the agent
-agent_p.N_rho = 60;           % division of the radius for discretization
-agent_p.N_phi = 60;           % division of the angle for discretization
+agent_p.N_rho = 40;           % division of the radius for discretization
+agent_p.N_phi = 40;           % division of the angle for discretization
 agent_p.max_speed = 0.5;     % [m/s] maximum speed reachable by the agent
 
 % Ball
 ball_p.init_distance = 2;% [m] distance of the ball location from the center
-ball_p.r = 0.1;          % [m] obstacle radius
-ball_p.speed = 0.6;      % [m/s] obstacle speed
+ball_p.r = 0.3;          % [m] obstacle radius [0.1, 0.2, 0.3]
+ball_p.speed = 0.2;      % [m/s] obstacle speed
 ball_p.w = deg2rad(1);   % [rad] uncertainty on the obstacle direction
 
 % Simulation parameters----------------------------------------------------
 
-Ts = 2e-2;         % sampling time
-sim_time = 6;     % total simulation time
+Ts = 5e-2;         % sampling time
+sim_time = 16;     % total simulation time 7,12,16
 n_sims = 20;       % number of simulations
 
 % Centroids gains ---------------------------------------------------------
@@ -47,20 +47,20 @@ kp_obstacle = 0.0;    % obstacle centroid gain
 
 SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go
-offset_cargo_PD = 0.25;
+offset_cargo_PD = 0.4;
 
 bound = 0.05; % buonds to keep when in formation
-hold_positions_factor = 0.3;
+hold_positions_factor = 0.2;
 
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.1; % attach threshold
+param_at.th = 0.05; % attach threshold
 
 % detaching
-param_dt.th = 0.7; % thershold for detach
+param_dt.th = 0.8; % thershold for detach
 density_in = 1;     % in angle range density multiplier
-density_out = 0.8;  % out angle range density multiplier
+density_out = 0.3;  % out angle range density multiplier
 
 % prioirty
 Kp = 4; % importance of obstacle distance in priority

@@ -60,7 +60,12 @@ classdef tester
             % second test: point density outside, max density sould be at
             % maximum rho, in the direction of the point.
             
-            center = [2 ; 2]; % [m]
+            map_width = map_cm.XLocalLimits(2) - map_cm.XLocalLimits(1);
+            map_height = map_cm.YLocalLimits(2) - map_cm.YLocalLimits(1);
+            
+            
+            center = [map_width / 2 ; map_height / 2]; % [m]
+            
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
@@ -77,7 +82,7 @@ classdef tester
             agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
-            sf = 1;
+            sf = 0.2;
             % first test
             point = center + param_test.range / 2;
             
@@ -124,24 +129,29 @@ classdef tester
             % Test the collision detection with two agents, their centroids
             % should move in opposite directions and their Voronoi cells
             % should show a gap instead of touching
+            map_cm = png2BOMap('map_test_1.png', 40);
+            map_width = map_cm.XLocalLimits(2) - map_cm.XLocalLimits(1);
+            map_height = map_cm.YLocalLimits(2) - map_cm.YLocalLimits(1);
             
-            center = [2 ; 2]; % [m]
+            
+            center = [map_width / 2 ; map_height / 2]; % [m]
+            
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
-            param_test.range = 1;          % [m] max observable range
-            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.range = 1.0;          % [m] max observable range
+            param_test.comm_range = 1.0;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
-            param_test.N_rho = 30;           % division of the radius for discretization
-            param_test.N_phi = 30;           % division of the angle for discretization
+            param_test.N_rho = 60;           % division of the radius for discretization
+            param_test.N_phi = 60;           % division of the angle for discretization
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
-            dist = param_test.radius * 1.1;
-            agents(1) = agent('001', [2 + dist; 0], param_test, cargo, obj.map);
-            agents(2) = agent('002', [2 - dist; 0], param_test, cargo, obj.map);
+            dist = param_test.radius * 1.3;
+            agents(1) = agent('001', center + [dist; 0], param_test, cargo, map_cm);
+            agents(2) = agent('002', center + [- dist; 0], param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
@@ -161,10 +171,10 @@ classdef tester
                 figure()
                 grid on
                 hold on
-                axis equal
-                robot_flock.plotVoronoiTessellationDetailed(1);
-                robot_flock.plot()
-                robot_flock.plotCentroids();
+                show(map_cm)
+                robot_flock.plotVoronoiTessellation();
+                robot_flock.plot(false)
+                robot_flock.plotCentroids([]);
                 hold off
             end
             
@@ -214,7 +224,13 @@ classdef tester
         
         
         function flag = doubleDensityOnCell(obj, view)
-            center = [2 ; 2]; % [m]
+            map_cm = png2BOMap('map_test_1.png', 40);
+            map_width = map_cm.XLocalLimits(2) - map_cm.XLocalLimits(1);
+            map_height = map_cm.YLocalLimits(2) - map_cm.YLocalLimits(1);
+            
+            
+            center = [map_width / 2 ; map_height / 2]; % [m]
+            
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
@@ -223,14 +239,14 @@ classdef tester
             param_test.range = 1;          % [m] max observable range
             param_test.comm_range = 1.2;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
-            param_test.N_rho = 30;           % division of the radius for discretization
-            param_test.N_phi = 45;           % division of the angle for discretization
+            param_test.N_rho = 60;           % division of the radius for discretization
+            param_test.N_phi = 60;           % division of the angle for discretization
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
-            agents(1) = agent('001', cargo.center, param_test, cargo, obj.map);
+            agents(1) = agent('001', cargo.center, param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
-            sf = 0.5;
+            sf = 0.1;
             % first test
             point1 = center + param_test.range / 2;
             point2 = center - param_test.range / 2;
@@ -250,9 +266,10 @@ classdef tester
                 grid on
                 hold on
                 axis equal
-                show(obj.map)
-                robot_flock.plot();
-                robot_flock.plotVoronoiTessellationDetailed(1);
+                show(map_cm)
+                robot_flock.plotVoronoiTessellationDetailed(1, 40);
+                robot_flock.plot(false);
+                
             end
         end
         
@@ -292,17 +309,17 @@ classdef tester
         
         
         function flag = connectivityMaintenance(obj, view)
-            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            map_cm = png2BOMap('map_test_1.png', 35); % specific map to check connectivity maintenance
             center = [map_cm.XWorldLimits(2) / 2 ; map_cm.YWorldLimits(2) / 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             
-            param_test.range = 1;          % [m] max observable range
-            param_test.comm_range = 1.2;     % [m] max connection distance
+            param_test.range = 1.5;          % [m] max observable range
+            param_test.comm_range = 1.5;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
-            param_test.N_rho = 40;           % division of the radius for discretization
-            param_test.N_phi = 40;           % division of the angle for discretization
+            param_test.N_rho = 60;           % division of the radius for discretization
+            param_test.N_phi = 60;           % division of the angle for discretization
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             cargo = RectangularCargo(center, center_mass, orientation, dimensions);
@@ -325,9 +342,10 @@ classdef tester
             if(view == true)
                 figure()
                 hold on
-                robot_flock.plotVoronoiTessellationDetailed(1)
-                robot_flock.plot();
-                robot_flock.plotCentroids();
+                show(map_cm);
+                robot_flock.plotVoronoiTessellationDetailed(1, 30)
+                robot_flock.plot(false);
+                robot_flock.plotCentroids([]);
             end
             
             flag_x = abs(agents(1).formation_VC.centroid(1)) < obj.max_error;
@@ -408,28 +426,27 @@ classdef tester
         
         function flag = fixedFormation(obj, flag_plot)
             % 
-            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
-            
-            center = [2 ; 2]; % [m]
+            map_cm = png2BOMap('map_test_1.png', 50); % specific map to check connectivity maintenance
+            center = [map_cm.XWorldLimits(2) / 2 ; map_cm.YWorldLimits(2) / 2]; % [m]
             center_mass = [0;0];        % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi/2;         % [rad]
             cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
-            param_test.range = 2.5;          % [m] max observable range
-            param_test.comm_range = 3;     % [m] max connection distance
-            param_test.radius = 0.1;         % [m] hitbox of the agent
+            param_test.range = 1.5;          % [m] max observable range
+            param_test.comm_range = 1.5;     % [m] max connection distance
+            param_test.radius = 0.05;         % [m] hitbox of the agent
             param_test.N_rho = 100;           % division of the radius for discretization
             param_test.N_phi = 100;           % division of the angle for discretization
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
-            agents(1) = agent('001', [2+1; 2 + 0], param_test, cargo, map_cm);
-            agents(2) = agent('002', [2-1; 2 + 0], param_test, cargo, map_cm);
-            agents(3) = agent('003', [2; 2 + 1], param_test, cargo, map_cm);
-            agents(4) = agent('004', [2; 2 - 1], param_test, cargo, map_cm);
+            agents(1) = agent('001', center+[0.7;  0], param_test, cargo, map_cm);
+            agents(2) = agent('002', center+[-0.7; 0], param_test, cargo, map_cm);
+            agents(3) = agent('003', center+[0;  0.7], param_test, cargo, map_cm);
+            agents(4) = agent('004', center+[0; -0.7], param_test, cargo, map_cm);
             
-            bound = 0.05;
+            bound = 0.10;
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.meetNeighbours();
@@ -444,12 +461,11 @@ classdef tester
 
             if(flag_plot == true)
                 figure()
-                grid on
                 hold on
-                axis equal
-                robot_flock.plotVoronoiTessellationDetailed(1);
-                robot_flock.plot()
-                robot_flock.plotCentroids();
+                show(map_cm)
+                robot_flock.plotVoronoiTessellationDetailed(1, 40);
+                robot_flock.plot(true)
+                robot_flock.plotCentroids([]);
                 hold off
             end
             
@@ -756,17 +772,17 @@ classdef tester
             % a ball is thrown in the upper part of the visibility set in
             % the horiziontal direction. The Voronoi cell has to change
             % consequently.
-            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
-            
-            center = [2 ; 1]; % [m]
+            map_cm = png2BOMap('map_test_1.png', 35); % specific map to check connectivity maintenance
+            center = [map_cm.XWorldLimits(2) / 2 ; map_cm.YWorldLimits(2) / 2]; % [m]
+
             center_mass = [0; 0];       % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi / 2;       % [rad]
             cargo = RectangularCargo(center, center_mass, orientation, dimensions);
             
             
-            param_test.range = 2;          % [m] max observable range
-            param_test.comm_range = 3;     % [m] max connection distance
+            param_test.range = 1.5;          % [m] max observable range
+            param_test.comm_range = 1.5;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
             param_test.N_rho = 30;           % division of the radius for discretization
             param_test.N_phi = 50;           % division of the angle for discretization
@@ -775,9 +791,9 @@ classdef tester
             hold_positions_factor = 0.5;
             hold_positions = [1.5, 3; 1.8, 1; 2.0, 0.9];
             
-            agents(1) = agent('001', [1.75; 2.1], param_test, cargo, map_cm);
-            agents(2) = agent('002', [1.5; 0.9], param_test, cargo, map_cm);
-            agents(3) = agent('003', [2.5; 0.9], param_test, cargo, map_cm);
+            agents(1) = agent('001', center + [0.5;  0.5], param_test, cargo, map_cm);
+            agents(2) = agent('002', center + [0; -0.5], param_test, cargo, map_cm);
+            agents(3) = agent('003', center + [0.5;-0.5], param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, obj.Ts / 2, 0);
             
@@ -793,10 +809,8 @@ classdef tester
             
             if(flag_plot == true)
                 figure();
-                axis equal
-                grid on
                 show(map_cm);
-                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plotVoronoiTessellationDetailed(1, 40);
                 robot_flock.plot(true);
                 robot_flock.plotCentroids([], 'Obstacle');
                 robot_flock.plotCentroids([], 'Formation');
@@ -861,9 +875,12 @@ classdef tester
             % a ball is thrown in the upper part of the visibility set in
             % the horiziontal direction. The Voronoi cell has to change
             % consequently.
-            map_cm = png2BOMap('map_test_1.png', 22); % specific map to check connectivity maintenance
+            map_cm = png2BOMap('map_test_1.png', 60); 
+            map_width = map_cm.XLocalLimits(2) - map_cm.XLocalLimits(1);
+            map_height = map_cm.YLocalLimits(2) - map_cm.YLocalLimits(1);
             
-            center = [2 ; 1]; % [m]
+            
+            center = [map_width / 2 ; map_height / 2]; % [m]
             center_mass = [0; 0];       % [m]
             dimensions = [1.5; 1];      % [m]
             orientation = pi / 2;       % [rad]
@@ -877,7 +894,7 @@ classdef tester
             param_test.N_phi = 50;           % division of the angle for discretization
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
-            agents(1) = agent('001', [1.5; 1], param_test, cargo, map_cm);
+            agents(1) = agent('001', center, param_test, cargo, map_cm);
             
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
@@ -888,6 +905,9 @@ classdef tester
             robot_flock.computeVoronoiCentroids();
             if(flag_plot == true)
                 figure();
+                
+                set(gcf,'color','w');
+                axis equal
                 hold on;
                 show(map_cm);
                 robot_flock.plotVoronoiTessellationDetailed(1);

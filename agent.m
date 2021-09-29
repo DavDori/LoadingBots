@@ -27,8 +27,8 @@ classdef agent < handle
         last_centroid % last centroid stored as vector
         
         bounds double {mustBeNumeric} % ideal distances to keep from each neighbour
-        way_point (2,1) double {mustBeNumeric} % position to reach
-        
+        way_point (2,1) double {mustBeNumeric} % position to reach wrt world frame
+        attached_rel_position (2,1) double {mustBeNumeric} % position wrt cargo
         priority % measure of how much an agent wants to detach from the structure
     end
     
@@ -52,6 +52,7 @@ classdef agent < handle
             obj.color = rand(1,3);
             obj.detach_angle = [0,0];
             obj.last_centroid = [0;0];
+            obj.attached_rel_position = [0;0];
         end
               
         % METHODS: communication
@@ -183,16 +184,20 @@ classdef agent < handle
         end
         
         
-        function obj = attach(obj) 
+        function attach(obj, warning_flag) 
             % if possible attach the robot to the load
             obj.attached = isInsideRectLoad(obj);
-            if(obj.attached == false)
+            if(obj.attached == false && warning_flag == true)
                 warning('Attach operation outside the load area')
             end
         end
         
+        function saveCargoPosition(obj)
+            obj.attached_rel_position = ...
+                    rotationMatrix(obj.cargo.orientation)' * (obj.position - obj.cargo.center); 
+        end
         
-        function obj = detach(obj) 
+        function detach(obj) 
             % detach the agent from the load
             obj.attached = false;
             c_prv = obj.last_centroid;
@@ -211,14 +216,6 @@ classdef agent < handle
                 end
                 obj.detach_angle = angle_range;
             end
-%             angle = obj.getObstacleCentroidAngle();
-%             [m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
-%             if(m_out > m_in) % select the region outside the range
-%                 angle_range = [angle + pi, angle]; 
-%             else
-%                 angle_range = [angle, angle + pi]; 
-%             end
-%             obj.detach_angle = angle_range;
         end
         
         % METHODS: voronoi cell
@@ -439,14 +436,12 @@ classdef agent < handle
                 
         % METHODS: path planning ------------------------------------------
         
-        function way_point = computeWayPoint(obj, cargo_final_position)
-            % compute the relative position that the agent should reach the
+        function computeWayPoint(obj, cargo_final_pos)
+            % compute the absolute position that the agent should reach the
             % input pose has to be structured as [x; y; theta]
-            delta_position = obj.position - obj.cargo.center;
-            delta_angle = cargo_final_position(3) - obj.cargo.orientation; 
-            way_point = cargo_final_position(1:2) + ...
-                rotationMatrix(delta_angle) * delta_position;
-            obj.way_point = way_point;
+
+            obj.way_point = cargo_final_pos(1:2) + ...
+                rotationMatrix(cargo_final_pos(3)) * obj.attached_rel_position;
         end
         
         
@@ -590,15 +585,15 @@ classdef agent < handle
         end
         
         
-        function plotVoronoiCellDetailed(obj, step, type)
+        function plotVoronoiCellDetailed(obj, step, res, type)
             % plot a detailed version of the of the voronoi cell
             % considering the density of every point
-            if(nargin < 3)
-                obj.formation_VC.plot(obj.position, step);
+            if(nargin < 4)
+                obj.formation_VC.plot(obj.position, step, res);
             elseif(strcmp(type, 'Formation'))
-                obj.formation_VC.plot(obj.position, step);
+                obj.formation_VC.plot(obj.position, step, res);
             elseif(strcmp(type, 'Obstacle'))
-                obj.obstacle_VC.plot(obj.position, step);
+                obj.obstacle_VC.plot(obj.position, step, res);
             else
                 error(strcat('Error: wrong type: ', type, 'of voronoi cell in plot'))
             end
@@ -607,10 +602,12 @@ classdef agent < handle
         
         function print(obj)
             % print basic data of the agent
-            fprintf('Agent %s info:\n', obj.name);
+            disp(strcat('Agent', obj.name));
             fprintf('position: %f, %f \t centroid position %f, %f \n', ...
-                obj.position, obj.formation_VC.centroid);
-            fprintf('way point %f, %f \n', obj.way_point);
+                obj.position(1), obj.position(2), obj.formation_VC.centroid(1),...
+                obj.formation_VC.centroid(2));
+            fprintf('way point %f, %f \n', obj.way_point(1),obj.way_point(2));
+            fprintf('ARP %f, %f \n', obj.attached_rel_position(1),obj.attached_rel_position(2));
         end
         
         

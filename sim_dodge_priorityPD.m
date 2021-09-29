@@ -19,10 +19,10 @@ cargo_p.dimensions =  [1.5; 1.5];   % [m]
 cargo_p.orientation = pi / 2;       % [rad]
 
 % Agents
-n_agents = 10;               % number of agents
-division_starting_spots = 4; % define the starting areas
-agent_p.range = 1.0;         % [m] max observable range
-agent_p.comm_range = 1.0;      % [m] max connection distance
+n_agents = 7;               % number of agents
+division_starting_spots = 3; % define the starting areas
+agent_p.range = 1.5;         % [m] max observable range
+agent_p.comm_range = 1.5;      % [m] max connection distance
 agent_p.radius = 0.05;       % [m] hitbox of the agent
 agent_p.N_rho = 40;          % division of the radius for discretization
 agent_p.N_phi = 40;          % division of the angle for discretization
@@ -30,8 +30,8 @@ agent_p.max_speed = 0.5;     % [m/s] maximum speed reachable by the agent
 
 % Ball
 ball_p.init_angle = pi/4;  % [rad] angle at which the ball is located wtr the center
-ball_p.init_distance = 1.5; % [m] distance of the ball location from the center
-ball_p.r = 0.1;           % [m] obstacle radius
+ball_p.init_distance = 2; % [m] distance of the ball location from the center
+ball_p.r = 0.2;           % [m] obstacle radius
 ball_p.speed = 0.2;       % [m/s] obstacle speed
 ball_p.w = deg2rad(5);    % [rad] uncertainty on the obstacle direction
 
@@ -39,7 +39,7 @@ ball_p.w = deg2rad(5);    % [rad] uncertainty on the obstacle direction
 video_flag = true;
 steps_per_frame = 2; % take 1 frame every x steps of simulation
 
-Ts = 5e-2;         % sampling time
+Ts = 2e-2;         % sampling time
 sim_time = 16;     % total simulation time
 slow_factor = 1;   % x1 speed of visualization
 
@@ -50,20 +50,20 @@ kp_obstacle = 0;%0.5;    % obstacle centroid gain
 
 SUC_steps = 50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go in the spread under cargo phase
-offset_cargo_PD = 0.4;% [m] offset from cargo shape where robots can go in the PD phase
+offset_cargo_PD = 0.25;% [m] offset from cargo shape where robots can go in the PD phase
 
 bound = 0.05; % buonds to keep when in formation
-hold_positions_factor = 0.2;
+hold_positions_factor = 0.3;
 
 % attaching 
 param_at.Kfor = 1;
 param_at.Kobs = 1;
-param_at.th = 0.05; % attach threshold
+param_at.th = 0.1; % attach threshold
 
 % detaching
 param_dt.th = 0.8;  % thershold for detaching
 density_in = 1;     % in angle range density multiplier
-density_out = 0.3;  % out angle range density multiplier
+density_out = 0.5;  % out angle range density multiplier
 
 % prioirty
 Kp = 4; %importance of obstacle centroid length in priority
