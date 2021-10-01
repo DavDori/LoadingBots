@@ -318,8 +318,8 @@ classdef tester
             param_test.range = 1.5;          % [m] max observable range
             param_test.comm_range = 1.5;     % [m] max connection distance
             param_test.radius = 0.1;         % [m] hitbox of the agent
-            param_test.N_rho = 60;           % division of the radius for discretization
-            param_test.N_phi = 60;           % division of the angle for discretization
+            param_test.N_rho = 100;           % division of the radius for discretization
+            param_test.N_phi = 100;           % division of the angle for discretization
             param_test.max_speed = 1;        % [m/s] maximum speed of the agents
             
             cargo = RectangularCargo(center, center_mass, orientation, dimensions);
@@ -343,9 +343,8 @@ classdef tester
                 figure()
                 hold on
                 show(map_cm);
-                robot_flock.plotVoronoiTessellationDetailed(1, 30)
+                robot_flock.plotVoronoiTessellation();
                 robot_flock.plot(false);
-                robot_flock.plotCentroids([]);
             end
             
             flag_x = abs(agents(1).formation_VC.centroid(1)) < obj.max_error;
@@ -899,8 +898,8 @@ classdef tester
             robot_flock = flock(agents, cargo, obj.Ts, 0);
             
             robot_flock.computeVisibilitySets();
-            range = [pi/2,pi];
-            robot_flock.setDensityAngles(range, 1, 0.2, 1, 'Formation');
+            range = [pi,0];
+            robot_flock.setDensityAngles(range, 0.5, 0.2, 1, 'Formation');
 
             robot_flock.computeVoronoiCentroids();
             if(flag_plot == true)
@@ -910,7 +909,7 @@ classdef tester
                 axis equal
                 hold on;
                 show(map_cm);
-                robot_flock.plotVoronoiTessellationDetailed(1);
+                robot_flock.plotVoronoiTessellationDetailed(1, 70);
                 robot_flock.plot(true);
             end
             flag_success = true;

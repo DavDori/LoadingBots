@@ -287,7 +287,33 @@ classdef flock < handle
         end
         
         
-        function centroids = computeVoronoiCentroids(obj, type)
+        function computeVoronoiCentroids(obj, type)
+            % compute the centroid of every agent voronoi cell. It's
+            % possible to calculate the centroid relative to the formation
+            % or obstacle
+            if(nargin < 2)
+                for i = 1:obj.n_agents
+                    obj.agents(i).computeFormationCentroid();
+                end
+            elseif(strcmp(type, 'Formation'))
+                for i = 1:obj.n_agents
+                    obj.agents(i).computeFormationCentroid();
+                end
+            elseif(strcmp(type, 'Obstacle'))
+                for i = 1:obj.n_agents
+                    obj.agents(i).computeObstacleCentroid();
+                end
+            elseif(strcmp(type, 'Both'))
+                for i = 1:obj.n_agents
+                    obj.agents(i).computeFormationCentroid();
+                    obj.agents(i).computeObstacleCentroid();
+                end
+            else
+                error(strcat('Error: wrong type: ', type, 'of voronoi cell selected'))
+            end
+        end
+        
+        function centroids = getVoronoiCentroids(obj, type)
             % compute the centroid of every agent voronoi cell. It's
             % possible to calculate the centroid relative to the formation
             % or obstacle
@@ -466,9 +492,9 @@ classdef flock < handle
             end
             ids = obj.agentSelector(type);
             
-            c_formation = kp_formation * obj.computeVoronoiCentroids('Formation');
+            c_formation = kp_formation * obj.getVoronoiCentroids('Formation');
             if (nargin >= 3)
-                c_obstacle  = kp_obstacle  * obj.computeVoronoiCentroids('Obstacle');
+                c_obstacle  = kp_obstacle  * obj.getVoronoiCentroids('Obstacle');
             else
                 c_obstacle = zeros(size(c_formation));
             end
@@ -479,7 +505,15 @@ classdef flock < handle
             for i = ids
                 centroid = c(i,:);
                 % set kp as 1 to keep the driven gain dependent on the two kps
-                obj.agents(i).moveToCentroid(1, centroid);  
+                obj.agents(i).moveToCentroid(1, centroid);
+            end
+        end
+        
+        function saveLastObsCentroids(obj)
+            % save last centroid position
+            ids = 1:obj.n_agents;
+            for i = ids
+                obj.agents(i).saveLastObsCentroid();
             end
         end
         
@@ -619,6 +653,7 @@ classdef flock < handle
                 ids = obj.getDetached();
             end
             for i = ids
+                %obj.agents(i).setDetachAngle();
                 angle_range = obj.agents(i).detach_angle;
                 obj.agents(i).setDensityAngle(angle_range, v_in, v_out, 'Formation');
             end

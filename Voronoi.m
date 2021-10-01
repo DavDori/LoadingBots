@@ -302,7 +302,7 @@ classdef Voronoi < handle
         end
         
         
-        function c = computeCentroid(obj)
+        function computeCentroid(obj)
             % compute the centroid of the Voronoi cell considering a
             % mass function
            
@@ -319,6 +319,10 @@ classdef Voronoi < handle
                 c = [x;y]; % c corresponds with the center of mass of the cell
             end
             obj.centroid = c;
+        end
+        
+        function c = getCentroid(obj)
+            c = obj.centroid;
         end
         
         

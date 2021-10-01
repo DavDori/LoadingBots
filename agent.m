@@ -179,6 +179,9 @@ classdef agent < handle
             else
                 error('Trying to move towards centroid but it has not been computed');
             end
+        end
+        
+        function saveLastObsCentroid(obj)
             % considers movement as last operation 
             obj.last_centroid = obj.obstacle_VC.centroid;
         end
@@ -200,19 +203,30 @@ classdef agent < handle
         function detach(obj) 
             % detach the agent from the load
             obj.attached = false;
+            obj.setDetachAngle();
+        end
+        
+        function setDetachAngle(obj)
             c_prv = obj.last_centroid;
-            c_now = obj.obstacle_VC.centroid;
-            
+            c_now = obj.getObstacleCentroid();
+            obstacle_direction = c_prv - c_now;
             if(isempty(c_prv) || isempty(c_now))
                 %warning('Cannot perform obstacle direction detection!');
-            else
-                obstacle_direction = c_prv - c_now;
+            elseif(sum(obstacle_direction) ~= 0)
+                
                 angle = angle2D(obstacle_direction, 0.00001);
-                [m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
-                if(m_out > m_in) % select the region outside the range
-                    angle_range = [angle + pi, angle]; 
+                angle_c = angle2D(obj.getFormationCentroid(), 0.00001); % angle of the centroid
+                %[m_in, m_out] = obj.getMassAngle([angle, angle + pi]);
+                
+                is_within_range = angle_c < max(angle, wrapTo2Pi(angle + pi))...
+                    && angle_c > min(angle, wrapTo2Pi(angle + pi));
+                
+                if(is_within_range) % select the region outside the range
+                    angle_range = [max(angle, wrapTo2Pi(angle + pi)), ...
+                        min(angle, wrapTo2Pi(angle + pi))]; 
                 else
-                    angle_range = [angle, angle + pi]; 
+                    angle_range = [min(angle, wrapTo2Pi(angle + pi)), ...
+                        max(angle, wrapTo2Pi(angle + pi))]; 
                 end
                 obj.detach_angle = angle_range;
             end
@@ -447,27 +461,38 @@ classdef agent < handle
         
         function c = getFormationCentroid(obj)
             % return the centroid relative to the formation cell
-            c = obj.formation_VC.computeCentroid(); 
+            c = obj.formation_VC.getCentroid(); 
         end
         
         
         function c = getObstacleCentroid(obj)
             % return the centroid relative to the obstacle cell
-            c = obj.obstacle_VC.computeCentroid(); 
+            c = obj.obstacle_VC.getCentroid(); 
+        end
+        
+        function computeFormationCentroid(obj)
+            % set the centroid relative to the formation cell
+            obj.formation_VC.computeCentroid(); 
+        end
+        
+        
+        function computeObstacleCentroid(obj)
+            % set the centroid relative to the obstacle cell
+            obj.obstacle_VC.computeCentroid(); 
         end
         
         
         function alpha = getObstacleCentroidAngle(obj)
             % the centroid of the obstacle voronoi cell has to be 
             % calculated before this operation
-            c = obj.obstacle_VC.centroid;
+            c = obj.getObstacleCentroid();
             alpha = angle2D(c, 0.0001);
         end
         
         function alpha = getFormationCentroidAngle(obj)
             % the centroid of the formation voronoi cell has to be 
             % calculated before this operation
-            c = obj.formation_VC.centroid;
+            c = obj.getFormationCentroid();
             alpha = angle2D(c, 0.0001);
         end
         

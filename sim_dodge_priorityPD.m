@@ -30,16 +30,16 @@ agent_p.max_speed = 0.5;     % [m/s] maximum speed reachable by the agent
 
 % Ball
 ball_p.init_angle = pi/4;  % [rad] angle at which the ball is located wtr the center
-ball_p.init_distance = 2; % [m] distance of the ball location from the center
+ball_p.init_distance = 1.5; % [m] distance of the ball location from the center
 ball_p.r = 0.2;           % [m] obstacle radius
 ball_p.speed = 0.2;       % [m/s] obstacle speed
-ball_p.w = deg2rad(5);    % [rad] uncertainty on the obstacle direction
+ball_p.w = deg2rad(1);    % [rad] uncertainty on the obstacle direction
 
 % Simulation parameters----------------------------------------------------
 video_flag = true;
 steps_per_frame = 2; % take 1 frame every x steps of simulation
 
-Ts = 2e-2;         % sampling time
+Ts = 5e-2;         % sampling time
 sim_time = 16;     % total simulation time
 slow_factor = 1;   % x1 speed of visualization
 
@@ -48,7 +48,7 @@ slow_factor = 1;   % x1 speed of visualization
 kp_formation = 6;%6;   % formation centroid gain
 kp_obstacle = 0;%0.5;    % obstacle centroid gain
 
-SUC_steps = 50;     % spread under cargo steps
+SUC_steps = 30;%50;     % spread under cargo steps
 offset_cargo = 0.1; % [m] offset from cargo shape where robots can go in the spread under cargo phase
 offset_cargo_PD = 0.25;% [m] offset from cargo shape where robots can go in the PD phase
 
@@ -63,7 +63,7 @@ param_at.th = 0.1; % attach threshold
 % detaching
 param_dt.th = 0.8;  % thershold for detaching
 density_in = 1;     % in angle range density multiplier
-density_out = 0.5;  % out angle range density multiplier
+density_out = 0.4;  % out angle range density multiplier
 
 % prioirty
 Kp = 4; %importance of obstacle centroid length in priority
@@ -131,7 +131,7 @@ for i = 1:SUC_steps
     robots.computeVoronoiTessellationCargo(offset_cargo);
     robots.applyFarFromCenterMassDensity(5);
     robots.applyConstantDensity('Obstacle');
-    robots.computeVoronoiCentroids();
+    robots.computeVoronoiCentroids('Both');
     robots.moveToCentroids(kp_formation);
     
     % save the frame
@@ -169,6 +169,10 @@ last_d = zeros(robots.n_agents, 1); % set to 0
 priority_PD_history   = zeros(steps, robots.n_agents);
 priority_COM_history  = zeros(steps, robots.n_agents);
 driving_force_history = zeros(steps, robots.n_agents);
+x_history = zeros(steps, robots.n_agents);
+y_history = zeros(steps, robots.n_agents);
+
+robots.saveLastObsCentroids(); % initialize the saved value
 
 for i = 1:steps
     clc;
@@ -197,8 +201,9 @@ for i = 1:steps
     robots.applyMultiplePointsDensity(hold_positions, hold_positions_factor, 'All'); 
     
     robots.dodgeDensity(density_in, density_out, []);
+    robots.saveLastObsCentroids(); % updates its value
     
-    robots.computeVoronoiCentroids();
+    robots.computeVoronoiCentroids('Both');
     
     % get priority for each agent. Agents in a sfae zone that want to
     % attach will have a small priority value, while agents in danger an
@@ -229,11 +234,13 @@ for i = 1:steps
     % In some cases the obstacle should be already considered by the
     % formation cell but for non constant densities it has a different
     % weight
+    current_pos = robots.getPositions(); % n x 2
+    x_history(i,:) = current_pos(:,1)';
+    y_history(i,:) = current_pos(:,2)';
+    
     robots.moveToCentroids(kp_formation, kp_obstacle, 'Detached');
     Ball.move();
-    
-    
-    
+
     
     ids_at = robots.getAttached();
     ids_dt = robots.getDetached();
@@ -245,7 +252,7 @@ for i = 1:steps
         axis equal
         grid on
         show(map);
-        robots.plotVoronoiTessellationDetailed(2, ids_dt);
+        robots.plotVoronoiTessellationDetailed(2, 40, ids_dt);
         robots.plot(n_agents < 10);
         %robots.plotCentroids(ids_at, 'Obstacle');
         %robots.plotCentroids(ids_dt, 'Formation');
@@ -268,12 +275,14 @@ for i = 1:steps
     
     last_d = new_d;
     
+    
     % critical feilure conditions
     hit = robots.hasBeenHit(Ball); % check if there has been a collision
     if(hit == true)
         disp('Critical failure: Collision!');
         break; % exit the simulation loop 
     end
+    
 end
 
 if(video_flag == true)
@@ -325,4 +334,15 @@ for i = 1:robots.n_agents
 end
 plot([1,size(driving_force_history,1)], [param_at.th,param_at.th],'r','DisplayName', 'Attach limit'); 
 legend; 
+
+%% plot trajectory of each agent
+figure()
+title('Flock behaviour')
+set(gcf,'color','w');
+hold on
+show(map);
+for i = 1:robots.n_agents
+    plot(x_history(:,i), y_history(:,i), 'DisplayName',  string(robots.agents(i).name))
+end
+legend
     
